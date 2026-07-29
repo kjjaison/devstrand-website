@@ -87,33 +87,92 @@
     reveals.forEach((el) => el.classList.add("visible"));
   }
 
-  /* Contact form (client-side demo — wire to Formspree / Cloudflare Workers later) */
-  const form = document.querySelector("[data-contact-form]");
-  if (form) {
-    form.addEventListener("submit", (e) => {
+  /* Contact form → FormSubmit (delivers to info@devstrand.com) */
+  const CONTACT_ENDPOINT = "https://formsubmit.co/ajax/info@devstrand.com";
+  const forms = document.querySelectorAll("[data-contact-form]");
+
+  forms.forEach((form) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const status = form.querySelector("[data-form-status]");
+      const submitBtn = form.querySelector('button[type="submit"]');
       const data = new FormData(form);
       const name = (data.get("name") || "").toString().trim();
       const email = (data.get("email") || "").toString().trim();
       const message = (data.get("message") || "").toString().trim();
 
+      const setStatus = (text, type) => {
+        if (!status) return;
+        status.textContent = text;
+        status.classList.remove("is-error", "is-success");
+        if (type) status.classList.add(type);
+      };
+
       if (!name || !email || !message) {
-        if (status) status.textContent = "Please fill in name, email, and message.";
+        setStatus("Please fill in name, email, and message.", "is-error");
         return;
       }
 
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        if (status) status.textContent = "Please enter a valid email address.";
+        setStatus("Please enter a valid email address.", "is-error");
         return;
       }
 
-      if (status) {
-        status.textContent = "Thanks — your message is ready to send. Connect Formspree or your email API to go live.";
+      /* Honeypot — silently ignore bot fills */
+      if ((data.get("_honey") || "").toString().trim()) {
+        setStatus("Thanks — your message has been sent. We'll get back to you soon.", "is-success");
+        form.reset();
+        return;
       }
-      form.reset();
+
+      const payload = {
+        name,
+        email,
+        message,
+        company: (data.get("company") || "").toString().trim(),
+        service: (data.get("service") || "").toString().trim(),
+        subject: (data.get("subject") || "").toString().trim(),
+        _subject: "New enquiry from DevStrand website",
+        _template: "table",
+        _captcha: "false",
+      };
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.setAttribute("aria-busy", "true");
+      }
+      setStatus("Sending…", null);
+
+      try {
+        const res = await fetch(CONTACT_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        const result = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(result.message || "Unable to send right now.");
+        }
+
+        setStatus("Thanks — your message has been sent. We'll get back to you soon.", "is-success");
+        form.reset();
+      } catch (err) {
+        setStatus(
+          "Sorry, we couldn't send that. Email us at info@devstrand.com or try again.",
+          "is-error"
+        );
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute("aria-busy");
+        }
+      }
     });
-  }
+  });
 
   /* Current year */
   document.querySelectorAll("[data-year]").forEach((el) => {

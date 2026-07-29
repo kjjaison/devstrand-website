@@ -1008,10 +1008,27 @@ h1, h2, h3, h4 {
   resize: vertical;
 }
 
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .form-status {
   font-size: 0.9rem;
-  color: var(--accent);
+  color: var(--muted);
   min-height: 1.25rem;
+}
+
+.form-status.is-success {
+  color: var(--accent);
+}
+
+.form-status.is-error {
+  color: #e85d5d;
 }
 
 .map-embed {
