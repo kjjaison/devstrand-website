@@ -38,10 +38,7 @@ Replace placeholders:
 
 | Item | Where |
 |------|--------|
-| Phone number | All pages (`tel:` / WhatsApp / footer) |
-| Email | `hello@devstrand.com`, `careers@devstrand.com` |
 | LinkedIn URL | Footer / contact |
-| WhatsApp number | `wa.me/353…` links |
 | Map embed | `contact.html` — use your real office address |
 | Contact form backend | Wire to [Formspree](https://formspree.io), Cloudflare Workers, or email API |
 
