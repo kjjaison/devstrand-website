@@ -40,7 +40,7 @@ Replace placeholders:
 |------|--------|
 | LinkedIn URL | Footer / contact |
 | Map embed | `contact.html` — use your real office address |
-| Contact form backend | Wire to [Formspree](https://formspree.io), Cloudflare Workers, or email API |
+| Contact form backend | [FormSubmit](https://formsubmit.co) → `info@devstrand.com` (confirm inbox on first submit) |
 
 ## Site map
 
@@ -62,7 +62,7 @@ Replace placeholders:
 - Dark & light mode (persisted)
 - Scroll reveal + hero motion
 - SEO meta + Organisation schema on home
-- Contact form (client validation; ready for Formspree)
+- Contact form (FormSubmit → info@devstrand.com)
 - WhatsApp floating button
 - LinkedIn links
 - Google Maps embed on Contact
