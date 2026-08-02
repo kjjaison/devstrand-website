@@ -643,6 +643,34 @@ h1, h2, h3, h4 {
   max-width: 36rem;
 }
 
+/* ---- Maintenance / coming soon ---- */
+.maintenance-panel {
+  max-width: 40rem;
+  padding: 2.25rem 0 1rem;
+}
+
+.maintenance-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+
+.maintenance-panel h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  margin-bottom: 0.85rem;
+}
+
+.maintenance-panel p {
+  color: var(--ink-muted);
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
 /* ---- Content blocks ---- */
 .prose {
   max-width: 42rem;
