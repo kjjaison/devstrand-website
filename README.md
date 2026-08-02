@@ -52,9 +52,10 @@ Replace placeholders:
 | Industries | `industries.html` |
 | Portfolio | `portfolio.html` |
 | Technologies | `technologies.html` |
-| Careers | `careers.html` |
-| Blog | `blog.html` |
+| Tools | `tools.html` |
 | Contact | `contact.html` |
+| Careers (hidden for now) | `careers.html` |
+| Blog (hidden for now) | `blog.html` |
 
 ## Features
 
@@ -63,7 +64,6 @@ Replace placeholders:
 - Scroll reveal + hero motion
 - SEO meta + Organisation schema on home
 - Contact form (FormSubmit → info@devstrand.com)
-- WhatsApp floating button
 - LinkedIn links
 - Google Maps embed on Contact
 - Blog-ready listing page
