@@ -5,6 +5,8 @@ Thumbs.db
 .idea/
 node_modules/
 .env
+.env.bak
+*.env.bak
 !.env.example
 tools/.tmp/
 **/__pycache__/
