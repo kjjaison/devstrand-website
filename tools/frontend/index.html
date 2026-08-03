@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevStrand Tools — PDF &amp; Document Utilities</title>
+  <meta name="description" content="Merge, split, compress, convert, and edit PDFs. Word, Excel, JPG tools from DevStrand." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=2" />
+  <link rel="icon" href="https://devstrand.com/assets/logo-icon.png" type="image/png" />
+</head>
+<body>
+  <div class="page-bg" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="https://devstrand.com/" target="_blank" rel="noopener">
+      <img src="https://devstrand.com/assets/logo-icon.png" alt="" width="36" height="36" />
+      <span>Dev<span>Strand</span> Tools</span>
+    </a>
+    <nav>
+      <a href="https://devstrand.com/">Company site</a>
+      <a href="https://devstrand.com/contact.html">Contact</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <p class="eyebrow">tools.devstrand.com</p>
+      <h1>PDF &amp; document tools</h1>
+      <p class="lead">Merge, split, compress, convert, and lightly edit — files processed on your private tools server. Max 25&nbsp;MB per file (100&nbsp;MB for Compress PDF).</p>
+    </section>
+
+    <section class="tool-grid" id="tools"></section>
+
+    <section class="workspace" id="workspace" hidden>
+      <button type="button" class="back" id="backBtn">← All tools</button>
+      <h2 id="wsTitle"></h2>
+      <p class="ws-desc" id="wsDesc"></p>
+      <form id="toolForm" class="tool-form">
+        <div class="drop" id="dropZone">
+          <input type="file" id="fileInput" multiple />
+          <p><strong id="dropTitle">Drop files here</strong> or click to browse</p>
+          <p class="hint" id="fileHint"></p>
+          <ul class="file-list" id="fileList"></ul>
+        </div>
+        <div class="options" id="options"></div>
+        <button type="submit" class="btn" id="runBtn">Run</button>
+        <p class="status" id="status" role="status"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>© <span id="year"></span> DevStrand · CRO 821307 · Files are processed ephemerally on the tools server.</p>
+  </footer>
+
+  <script src="/static/js/app.js?v=2"></script>
+</body>
+</html>

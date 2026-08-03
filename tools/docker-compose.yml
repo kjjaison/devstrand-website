@@ -1,0 +1,35 @@
+services:
+  tools:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: devstrand-tools:local
+    # Local access only; public traffic comes via Cloudflare Tunnel
+    ports:
+      - "8080:8080"
+    environment:
+      MAX_UPLOAD_MB: "25"
+      MAX_COMPRESS_MB: "100"
+      TOOLS_TMP: /tmp/devstrand-tools
+    volumes:
+      - ./frontend:/app/frontend:ro
+    restart: unless-stopped
+    networks:
+      - toolsnet
+
+  # Exposes tools.devstrand.com without a static IP or open ports.
+  # Requires CLOUDFLARE_TUNNEL_TOKEN in .env (see README).
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - tools
+    networks:
+      - toolsnet
+
+networks:
+  toolsnet:
+    driver: bridge
