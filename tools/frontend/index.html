@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Free PDF Merge, Split, Compress, Edit &amp; JPG to PDF | DevStrand Tools</title>
-  <meta name="description" content="Free online PDF tools: merge PDF, combine PDF, split PDF, compress PDF, edit PDF text, watermark, JPG to PDF, PDF to JPG, Word/Excel/PowerPoint conversion. Up to 100 MB." />
-  <meta name="keywords" content="merge PDF, combine PDF, split PDF, compress PDF, edit PDF, JPG to PDF, PDF to JPG, PDF to Word, Word to PDF, free PDF editor, online PDF tools" />
+  <meta name="description" content="Free online PDF tools: merge, split, compress, edit, OCR, e-sign, watermark, JPG to PDF, Office conversion. No permanent storage — files expire quickly." />
+  <meta name="keywords" content="merge PDF, combine PDF, split PDF, compress PDF, edit PDF, OCR PDF, e-sign PDF, sign PDF, JPG to PDF, free PDF editor, online PDF tools" />
   <link rel="canonical" href="https://tools.devstrand.com/" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Free PDF Merge, Split, Compress &amp; Edit | DevStrand Tools" />
@@ -17,8 +17,8 @@
   <meta name="twitter:description" content="Online PDF manipulation: merge, split, compress, edit, JPG↔PDF, and Office converters." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/styles.css?v=11" />
+  <link href="https://fonts.googleapis.com/css2?family=Allura&family=Caveat:wght@600&family=Dancing+Script:wght@600;700&family=Great+Vibes&family=Homemade+Apple&family=Pacifico&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sacramento&family=Satisfy&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=20" />
   <link rel="icon" href="https://devstrand.com/assets/logo-icon.png" type="image/png" />
   <script type="application/ld+json">
   {
@@ -30,13 +30,15 @@
     "operatingSystem": "Any",
     "browserRequirements": "Requires JavaScript",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
-    "description": "Free online PDF merge, split, compress, edit, watermark, JPG to PDF, PDF to JPG, and Office document conversion.",
+    "description": "Free online PDF merge, split, compress, edit, OCR, e-sign, watermark, JPG to PDF, PDF to JPG, and Office document conversion. No permanent file storage.",
     "featureList": [
       "Merge PDF",
       "Combine PDF",
       "Split PDF",
       "Compress PDF",
       "Edit PDF",
+      "OCR PDF",
+      "E-sign PDF",
       "Watermark PDF",
       "JPG to PDF",
       "PDF to JPG",
@@ -44,7 +46,8 @@
       "Word to PDF",
       "PDF to Excel",
       "Excel to PDF",
-      "PDF to PowerPoint"
+      "PDF to PowerPoint",
+      "Shareable expiring links"
     ],
     "publisher": {
       "@type": "Organization",
@@ -58,22 +61,43 @@
   <div class="page-bg" aria-hidden="true"></div>
 
   <header class="topbar">
-    <a class="brand" href="https://devstrand.com/" target="_blank" rel="noopener">
+    <a class="brand" href="/" aria-label="DevStrand Tools home">
       <img src="https://devstrand.com/assets/logo-icon.png" alt="" width="36" height="36" />
       <span>Dev<span>Strand</span> Tools</span>
     </a>
-    <nav>
-      <a href="https://devstrand.com/">Company site</a>
-      <a href="https://devstrand.com/contact.html">Contact</a>
-    </nav>
+    <div class="topbar-actions">
+      <nav class="topbar-links" aria-label="Site">
+        <a href="https://devstrand.com/">Company site</a>
+        <a href="https://devstrand.com/contact.html">Contact</a>
+      </nav>
+      <div class="menu-dropdown" id="menuDropdown">
+        <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuList" aria-haspopup="menu" aria-label="Open menu">
+          <span class="menu-toggle-bars" aria-hidden="true"></span>
+        </button>
+        <ul class="dropdown-menu" id="menuList" role="menu" aria-hidden="true">
+          <li role="none"><button type="button" class="dropdown-item" data-menu-action="home" role="menuitem">All tools</button></li>
+          <li class="dropdown-sep" role="separator"></li>
+          <li role="none" class="dropdown-tools-wrap">
+            <ul class="dropdown-tools" id="menuToolList"></ul>
+          </li>
+        </ul>
+      </div>
+    </div>
   </header>
+
+  <div class="menu-backdrop" id="menuBackdrop"></div>
 
   <main class="wrap">
     <section class="hero">
       <p class="eyebrow">Free online PDF tools</p>
       <h1>Merge, split, compress &amp; edit PDFs</h1>
-      <p class="lead">Combine PDFs, split pages, compress large files, edit text, convert JPG to PDF / PDF to JPG, and transform Word, Excel, or PowerPoint — up to 100&nbsp;MB per file.</p>
+      <p class="lead">Combine PDFs, split pages, compress large files, OCR scans, e-sign, convert JPG ↔ PDF and Office docs — up to 100&nbsp;MB per file.</p>
     </section>
+
+    <aside class="trust-strip" aria-label="Privacy">
+      <strong>No permanent storage.</strong>
+      Files are processed ephemerally on the tools server. Downloads stay on your device. Optional email and share links are temporary — share links self-delete after expiry (15 minutes to 24 hours). We do not keep a document archive.
+    </aside>
 
     <noscript>
       <section class="wrap" style="padding-bottom: 2rem">
@@ -83,6 +107,8 @@
           <li>Split PDF</li>
           <li>Compress PDF</li>
           <li>Edit PDF</li>
+          <li>OCR PDF</li>
+          <li>E-sign PDF</li>
           <li>Watermark PDF</li>
           <li>JPG to PDF</li>
           <li>PDF to JPG</li>
@@ -175,18 +201,51 @@
         <div class="options" id="options"></div>
         <button type="submit" class="btn" id="runBtn">Run</button>
         <p class="status" id="status" role="status"></p>
+
+        <div class="delivery-panel" id="deliveryPanel" hidden>
+          <div class="email-panel" id="emailPanel" hidden>
+            <h3>Send result by email</h3>
+            <p class="hint" id="emailHint">Download still starts as usual. Optionally email a copy (max size depends on your mail provider).</p>
+            <div class="email-row">
+              <label class="sr-only" for="emailTo">Email address</label>
+              <input type="email" id="emailTo" name="email_to" autocomplete="email" placeholder="you@company.com" />
+              <button type="button" class="btn btn-secondary" id="emailBtn" disabled>Email file</button>
+            </div>
+            <p class="status" id="emailStatus" role="status"></p>
+          </div>
+
+          <div class="share-panel" id="sharePanel">
+            <h3>Shareable link</h3>
+            <p class="hint">Create a temporary link. The file is deleted automatically when the link expires — nothing is stored permanently.</p>
+            <div class="email-row">
+              <label class="sr-only" for="shareTtl">Link expires after</label>
+              <select id="shareTtl" aria-label="Link expires after">
+                <option value="15">Expires in 15 minutes</option>
+                <option value="60" selected>Expires in 1 hour</option>
+                <option value="360">Expires in 6 hours</option>
+                <option value="1440">Expires in 24 hours</option>
+              </select>
+              <button type="button" class="btn btn-secondary" id="shareBtn">Create link</button>
+            </div>
+            <div class="share-result" id="shareResult" hidden>
+              <input type="text" id="shareUrl" readonly aria-label="Shareable URL" />
+              <button type="button" class="btn btn-secondary" id="shareCopyBtn">Copy</button>
+            </div>
+            <p class="status" id="shareStatus" role="status"></p>
+          </div>
+        </div>
       </form>
     </section>
   </main>
 
   <footer class="foot">
-    <p>© <span id="year"></span> DevStrand · CRO 821307 · Files are processed ephemerally on the tools server.</p>
+    <p>© <span id="year"></span> DevStrand · CRO 821307 · <strong>No permanent storage</strong> — processing is ephemeral; share links expire; emailed copies are not archived.</p>
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
   <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js" defer></script>
   <script src="/static/js/editor.js?v=8" defer></script>
-  <script src="/static/js/app.js?v=9" defer></script>
+  <script src="/static/js/app.js?v=19" defer></script>
 </body>
 </html>

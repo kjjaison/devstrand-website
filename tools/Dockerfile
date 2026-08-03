@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice-impress \
     poppler-utils \
     ghostscript \
+    tesseract-ocr \
+    tesseract-ocr-eng \
     fonts-dejavu \
     fonts-liberation \
     && rm -rf /var/lib/apt/lists/*

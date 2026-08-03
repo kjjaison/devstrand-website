@@ -3,6 +3,7 @@ const TOOLS = [
     id: "merge",
     title: "Merge PDF",
     desc: "Combine multiple PDFs into one file.",
+    keywords: "merge combine join unite concatenate pdf",
     accept: ".pdf,application/pdf",
     multiple: true,
     endpoint: "/api/merge",
@@ -13,6 +14,7 @@ const TOOLS = [
     id: "split",
     title: "Split PDF",
     desc: "Split into pages or custom ranges.",
+    keywords: "split extract pages ranges separate",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/split",
@@ -35,6 +37,7 @@ const TOOLS = [
     id: "compress",
     title: "Compress PDF",
     desc: "Reduce PDF size with low → maximum compression levels.",
+    keywords: "compress reduce shrink size optimize smaller",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/compress",
@@ -58,6 +61,7 @@ const TOOLS = [
     id: "edit",
     title: "Edit PDF",
     desc: "Interactive editor — add or remove text and images on pages.",
+    keywords: "edit text image annotate modify change",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/edit",
@@ -66,9 +70,66 @@ const TOOLS = [
     interactiveEdit: true,
   },
   {
+    id: "ocr",
+    title: "OCR PDF",
+    desc: "Make scanned PDFs searchable with optical character recognition.",
+    keywords: "ocr scan searchable text recognition tesseract",
+    accept: ".pdf,application/pdf",
+    multiple: false,
+    endpoint: "/api/ocr",
+    hint: "Upload a scanned or image-based PDF. OCR may take a minute on large files.",
+    reorder: "pages",
+    fields: [
+      {
+        name: "language",
+        label: "OCR language",
+        type: "select",
+        options: [
+          { value: "eng", label: "English" },
+          { value: "eng+osd", label: "English + orientation detection" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "esign",
+    title: "E-sign PDF",
+    desc: "Type, draw, or upload a signature and stamp it onto your PDF.",
+    keywords: "esign e-sign sign signature typed name draw stamp",
+    accept: ".pdf,application/pdf",
+    multiple: false,
+    endpoint: "/api/esign",
+    hint: "Type your name to pick a generated signature style, or draw / upload one. Then choose pages and position.",
+    reorder: "pages",
+    signaturePad: true,
+    fields: [
+      {
+        name: "pages",
+        label: "Pages",
+        type: "text",
+        value: "all",
+        placeholder: "all or 1,3,5-7",
+      },
+      {
+        name: "position",
+        label: "Position",
+        type: "select",
+        options: [
+          { value: "bottom-right", label: "Bottom right" },
+          { value: "bottom-left", label: "Bottom left" },
+          { value: "bottom-center", label: "Bottom center" },
+          { value: "center", label: "Center" },
+        ],
+      },
+      { name: "signer_name", label: "Signer name (optional)", type: "text", value: "", placeholder: "Jane Doe" },
+      { name: "sig_width", label: "Signature width (pt)", type: "text", value: "160" },
+    ],
+  },
+  {
     id: "watermark",
     title: "Watermark PDF",
     desc: "Stamp diagonal text across every page.",
+    keywords: "watermark stamp confidential draft brand",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/watermark",
@@ -82,6 +143,7 @@ const TOOLS = [
     id: "pdf-to-word",
     title: "PDF to Word",
     desc: "Convert PDF to DOCX (best-effort layout).",
+    keywords: "pdf word docx convert export",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/pdf-to-word",
@@ -91,6 +153,7 @@ const TOOLS = [
     id: "word-to-pdf",
     title: "Word to PDF",
     desc: "Convert DOC/DOCX to PDF via LibreOffice.",
+    keywords: "word doc docx to pdf convert",
     accept: ".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     multiple: false,
     endpoint: "/api/word-to-pdf",
@@ -100,6 +163,7 @@ const TOOLS = [
     id: "pdf-to-excel",
     title: "PDF to Excel",
     desc: "Extract tables/text into an XLSX workbook.",
+    keywords: "pdf excel xlsx spreadsheet tables extract",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/pdf-to-excel",
@@ -109,6 +173,7 @@ const TOOLS = [
     id: "excel-to-pdf",
     title: "Excel to PDF",
     desc: "Convert spreadsheets to PDF.",
+    keywords: "excel xls xlsx csv to pdf convert",
     accept: ".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     multiple: false,
     endpoint: "/api/excel-to-pdf",
@@ -118,6 +183,7 @@ const TOOLS = [
     id: "pdf-to-ppt",
     title: "PDF to PowerPoint",
     desc: "Each page becomes a slide image.",
+    keywords: "pdf powerpoint pptx slides convert",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/pdf-to-powerpoint",
@@ -127,6 +193,7 @@ const TOOLS = [
     id: "pdf-to-jpg",
     title: "PDF to JPG",
     desc: "Render pages to JPG images (ZIP).",
+    keywords: "pdf jpg jpeg image export render",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/pdf-to-jpg",
@@ -137,6 +204,7 @@ const TOOLS = [
     id: "jpg-to-pdf",
     title: "JPG to PDF",
     desc: "Build a PDF from one or more images.",
+    keywords: "jpg jpeg png webp image to pdf photos",
     accept: ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp",
     multiple: true,
     endpoint: "/api/jpg-to-pdf",
@@ -163,6 +231,18 @@ const sortEmpty = document.getElementById("sortEmpty");
 const sortStageWrap = document.getElementById("sortStageWrap");
 const sortZoomLabel = document.getElementById("sortZoomLabel");
 const pdfEditorRoot = document.getElementById("pdfEditor");
+const emailPanel = document.getElementById("emailPanel");
+const emailTo = document.getElementById("emailTo");
+const emailBtn = document.getElementById("emailBtn");
+const emailStatus = document.getElementById("emailStatus");
+const emailHint = document.getElementById("emailHint");
+const deliveryPanel = document.getElementById("deliveryPanel");
+const shareBtn = document.getElementById("shareBtn");
+const shareTtl = document.getElementById("shareTtl");
+const shareStatus = document.getElementById("shareStatus");
+const shareResult = document.getElementById("shareResult");
+const shareUrl = document.getElementById("shareUrl");
+const shareCopyBtn = document.getElementById("shareCopyBtn");
 
 let active = null;
 /** @type {{ id: string, kind: 'file'|'page', file?: File, pageIndex?: number, label: string, previewUrl?: string, pdfBytes?: ArrayBuffer }[]} */
@@ -174,6 +254,33 @@ let pdfEditor = null;
 let selectedQueueId = null;
 let sortScale = 1.4;
 let sortPreviewToken = 0;
+/** @type {{ blob: Blob, name: string } | null} */
+let lastResult = null;
+let emailEnabled = false;
+let emailMaxMb = 20;
+let shareMaxMb = 50;
+/** @type {HTMLCanvasElement | null} */
+let sigCanvas = null;
+let sigDrawing = false;
+/** @type {File | null} */
+let sigUploadFile = null;
+/** @type {'draw' | 'type' | 'upload'} */
+let sigMode = "type";
+/** @type {HTMLCanvasElement | null} */
+let sigTypedSelected = null;
+/** @type {HTMLElement | null} */
+let sigPadRoot = null;
+
+const SIG_TYPE_STYLES = [
+  { id: "dancing", label: "Script", font: '"Dancing Script", cursive', size: 64, color: "#111111" },
+  { id: "vibes", label: "Elegant", font: '"Great Vibes", cursive', size: 68, color: "#111111" },
+  { id: "allura", label: "Flourish", font: "Allura, cursive", size: 72, color: "#1a1a1a" },
+  { id: "satisfy", label: "Casual", font: "Satisfy, cursive", size: 60, color: "#111111" },
+  { id: "sacramento", label: "Light", font: "Sacramento, cursive", size: 70, color: "#222222" },
+  { id: "pacifico", label: "Bold", font: "Pacifico, cursive", size: 52, color: "#111111" },
+  { id: "homemade", label: "Hand", font: '"Homemade Apple", cursive', size: 42, color: "#1a1a1a" },
+  { id: "caveat", label: "Marker", font: "Caveat, cursive", size: 64, color: "#111111" },
+];
 
 function getPdfEditor() {
   if (!pdfEditor && window.InteractivePdfEditor && pdfEditorRoot) {
@@ -182,7 +289,442 @@ function getPdfEditor() {
   return pdfEditor;
 }
 
-document.getElementById("year").textContent = String(new Date().getFullYear());
+const yearEl = document.getElementById("year");
+if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+
+fetch("/api/health")
+  .then((r) => r.json())
+  .then((data) => {
+    emailEnabled = Boolean(data.email_enabled);
+    emailMaxMb = Number(data.email_max_mb) || 20;
+    shareMaxMb = Number(data.share_max_mb) || 50;
+    if (emailHint && emailEnabled) {
+      emailHint.textContent = `Download still starts as usual. Optionally email a copy (max ${emailMaxMb} MB for email).`;
+    }
+    syncEmailControls();
+  })
+  .catch(() => {
+    emailEnabled = false;
+    syncEmailControls();
+  });
+
+function syncEmailControls() {
+  if (emailPanel) emailPanel.hidden = !emailEnabled;
+  if (!emailBtn) return;
+  const hasResult = Boolean(lastResult?.blob);
+  emailBtn.disabled = !emailEnabled || !hasResult;
+  if (!emailEnabled) {
+    emailBtn.title = "";
+  } else if (!hasResult) {
+    emailBtn.title = "Run a tool first to create a file";
+  } else {
+    emailBtn.title = "";
+  }
+  if (shareBtn) shareBtn.disabled = !hasResult;
+}
+
+function showDeliveryPanel(blob, name) {
+  lastResult = { blob, name };
+  if (deliveryPanel) deliveryPanel.hidden = false;
+  if (emailStatus) {
+    emailStatus.textContent = "";
+    emailStatus.className = "status";
+  }
+  if (shareStatus) {
+    shareStatus.textContent = "";
+    shareStatus.className = "status";
+  }
+  if (shareResult) shareResult.hidden = true;
+  if (shareUrl) shareUrl.value = "";
+  syncEmailControls();
+}
+
+function hideDeliveryPanel() {
+  lastResult = null;
+  if (deliveryPanel) deliveryPanel.hidden = true;
+  if (emailStatus) {
+    emailStatus.textContent = "";
+    emailStatus.className = "status";
+  }
+  if (shareStatus) {
+    shareStatus.textContent = "";
+    shareStatus.className = "status";
+  }
+  if (shareResult) shareResult.hidden = true;
+  syncEmailControls();
+}
+
+function setEmailStatus(text, isError) {
+  if (!emailStatus) return;
+  emailStatus.textContent = text;
+  emailStatus.className = "status" + (isError ? " error" : text ? " ok" : "");
+}
+
+function setShareStatus(text, isError) {
+  if (!shareStatus) return;
+  shareStatus.textContent = text;
+  shareStatus.className = "status" + (isError ? " error" : text ? " ok" : "");
+}
+
+async function sendResultEmail() {
+  if (!lastResult?.blob) {
+    setEmailStatus("Run a tool first, then email the result.", true);
+    return;
+  }
+  if (!emailEnabled) {
+    setEmailStatus("Email is not configured on this server.", true);
+    return;
+  }
+  const to = (emailTo?.value || "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    setEmailStatus("Enter a valid email address.", true);
+    return;
+  }
+  if (lastResult.blob.size > emailMaxMb * 1024 * 1024) {
+    setEmailStatus(`File is over ${emailMaxMb} MB — email providers usually reject it. Use a share link instead.`, true);
+    return;
+  }
+
+  emailBtn.disabled = true;
+  setEmailStatus("Sending…");
+  try {
+    const fd = new FormData();
+    fd.append("file", lastResult.blob, lastResult.name);
+    fd.append("to_email", to);
+    fd.append("tool_name", active?.title || "DevStrand Tools");
+    const res = await fetch("/api/email-result", { method: "POST", body: fd });
+    if (!res.ok) {
+      let msg = `Error ${res.status}`;
+      try {
+        const data = await res.json();
+        msg = data.detail || msg;
+        if (Array.isArray(msg)) msg = msg.map((m) => m.msg || JSON.stringify(m)).join("; ");
+      } catch (_) {
+        msg = await res.text();
+      }
+      throw new Error(msg || "Email failed");
+    }
+    setEmailStatus(`Sent to ${to}.`, false);
+  } catch (err) {
+    setEmailStatus(err.message || String(err), true);
+  } finally {
+    syncEmailControls();
+  }
+}
+
+async function createShareLink() {
+  if (!lastResult?.blob) {
+    setShareStatus("Run a tool first, then create a link.", true);
+    return;
+  }
+  if (lastResult.blob.size > shareMaxMb * 1024 * 1024) {
+    setShareStatus(`File is over ${shareMaxMb} MB — too large to share. Download instead.`, true);
+    return;
+  }
+  const minutes = Number(shareTtl?.value || 60);
+  shareBtn.disabled = true;
+  setShareStatus("Creating link…");
+  try {
+    const fd = new FormData();
+    fd.append("file", lastResult.blob, lastResult.name);
+    fd.append("expires_minutes", String(minutes));
+    const res = await fetch("/api/share", { method: "POST", body: fd });
+    if (!res.ok) {
+      let msg = `Error ${res.status}`;
+      try {
+        const data = await res.json();
+        msg = data.detail || msg;
+        if (Array.isArray(msg)) msg = msg.map((m) => m.msg || JSON.stringify(m)).join("; ");
+      } catch (_) {
+        msg = await res.text();
+      }
+      throw new Error(msg || "Share failed");
+    }
+    const data = await res.json();
+    const absolute = new URL(data.url, window.location.origin).href;
+    if (shareUrl) shareUrl.value = absolute;
+    if (shareResult) shareResult.hidden = false;
+    setShareStatus(`Link ready — expires in ${data.expires_minutes} minutes. File deleted after that.`, false);
+  } catch (err) {
+    setShareStatus(err.message || String(err), true);
+  } finally {
+    syncEmailControls();
+  }
+}
+
+if (emailBtn) emailBtn.addEventListener("click", () => sendResultEmail());
+if (shareBtn) shareBtn.addEventListener("click", () => createShareLink());
+if (shareCopyBtn) {
+  shareCopyBtn.addEventListener("click", async () => {
+    const value = shareUrl?.value || "";
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setShareStatus("Link copied.", false);
+    } catch (_) {
+      shareUrl.select();
+      setShareStatus("Select the link and copy it manually.", true);
+    }
+  });
+}
+if (emailTo) {
+  emailTo.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      sendResultEmail();
+    }
+  });
+}
+
+function clearSignaturePad() {
+  sigUploadFile = null;
+  sigTypedSelected = null;
+  if (sigPadRoot) {
+    sigPadRoot.querySelectorAll("[data-sig-style].selected").forEach((el) => el.classList.remove("selected"));
+  }
+  if (!sigCanvas) return;
+  const ctx = sigCanvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, sigCanvas.width, sigCanvas.height);
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+}
+
+function setSigMode(mode) {
+  sigMode = mode;
+  if (!sigPadRoot) return;
+  sigPadRoot.querySelectorAll("[data-sig-mode-btn]").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-sig-mode-btn") === mode);
+  });
+  sigPadRoot.querySelectorAll("[data-sig-pane]").forEach((pane) => {
+    pane.hidden = pane.getAttribute("data-sig-pane") !== mode;
+  });
+  if (mode !== "upload") sigUploadFile = null;
+  if (mode !== "type") sigTypedSelected = null;
+}
+
+function renderTypedSignatures(name) {
+  const grid = sigPadRoot?.querySelector("[data-sig-style-grid]");
+  if (!grid) return;
+  const text = (name || "").trim();
+  grid.innerHTML = "";
+  sigTypedSelected = null;
+
+  if (!text) {
+    grid.innerHTML = `<p class="hint">Type your name above to generate signature styles.</p>`;
+    return;
+  }
+
+  SIG_TYPE_STYLES.forEach((style, index) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "sig-style";
+    btn.dataset.sigStyle = style.id;
+    btn.setAttribute("aria-label", `${style.label} signature style`);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 420;
+    canvas.height = 120;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = style.color;
+    ctx.font = `600 ${style.size}px ${style.font}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    // Slight italic slant for a more natural signature look
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.transform(1, 0, -0.12, 1, 0, 0);
+    let fontSize = style.size;
+    ctx.font = `600 ${fontSize}px ${style.font}`;
+    while (fontSize > 28 && ctx.measureText(text).width > canvas.width - 36) {
+      fontSize -= 2;
+      ctx.font = `600 ${fontSize}px ${style.font}`;
+    }
+    ctx.fillText(text, 0, 4);
+    ctx.restore();
+
+    const label = document.createElement("span");
+    label.textContent = style.label;
+    btn.appendChild(canvas);
+    btn.appendChild(label);
+
+    btn.addEventListener("click", () => {
+      grid.querySelectorAll(".sig-style.selected").forEach((el) => el.classList.remove("selected"));
+      btn.classList.add("selected");
+      sigTypedSelected = canvas;
+      sigUploadFile = null;
+      // Mirror into optional printed name under the stamp
+      const signerInput = options.querySelector('input[name="signer_name"]');
+      if (signerInput && !signerInput.value.trim()) signerInput.value = text;
+    });
+
+    grid.appendChild(btn);
+    if (index === 0) {
+      btn.classList.add("selected");
+      sigTypedSelected = canvas;
+    }
+  });
+}
+
+async function ensureSigFonts() {
+  if (!document.fonts?.load) return;
+  await Promise.allSettled(
+    SIG_TYPE_STYLES.map((s) => document.fonts.load(`600 48px ${s.font}`))
+  );
+}
+
+function setupSignaturePad(root) {
+  sigPadRoot = root;
+  sigCanvas = root.querySelector("[data-sig-canvas]");
+  const clearBtn = root.querySelector("[data-sig-clear]");
+  const uploadInput = root.querySelector("[data-sig-upload]");
+  const typeInput = root.querySelector("[data-sig-type-name]");
+  const generateBtn = root.querySelector("[data-sig-generate]");
+
+  root.querySelectorAll("[data-sig-mode-btn]").forEach((btn) => {
+    btn.addEventListener("click", () => setSigMode(btn.getAttribute("data-sig-mode-btn") || "type"));
+  });
+
+  if (sigCanvas) {
+    const ctx = sigCanvas.getContext("2d");
+    clearSignaturePad();
+
+    const pos = (e) => {
+      const rect = sigCanvas.getBoundingClientRect();
+      const src = e.touches ? e.touches[0] : e;
+      return {
+        x: ((src.clientX - rect.left) / rect.width) * sigCanvas.width,
+        y: ((src.clientY - rect.top) / rect.height) * sigCanvas.height,
+      };
+    };
+
+    const start = (e) => {
+      e.preventDefault();
+      setSigMode("draw");
+      sigUploadFile = null;
+      sigTypedSelected = null;
+      sigDrawing = true;
+      const p = pos(e);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    };
+    const move = (e) => {
+      if (!sigDrawing) return;
+      e.preventDefault();
+      const p = pos(e);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    };
+    const end = () => {
+      sigDrawing = false;
+    };
+
+    sigCanvas.addEventListener("mousedown", start);
+    sigCanvas.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", end);
+    sigCanvas.addEventListener("touchstart", start, { passive: false });
+    sigCanvas.addEventListener("touchmove", move, { passive: false });
+    sigCanvas.addEventListener("touchend", end);
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      clearSignaturePad();
+      if (typeInput) renderTypedSignatures(typeInput.value);
+    });
+  }
+
+  if (uploadInput) {
+    uploadInput.addEventListener("change", () => {
+      const file = uploadInput.files?.[0];
+      if (!file) return;
+      setSigMode("upload");
+      sigUploadFile = file;
+      sigTypedSelected = null;
+      const preview = root.querySelector("[data-sig-upload-preview]");
+      if (preview) {
+        preview.hidden = false;
+        preview.src = URL.createObjectURL(file);
+      }
+    });
+  }
+
+  const runGenerate = async () => {
+    const name = (typeInput?.value || "").trim();
+    if (!name) {
+      renderTypedSignatures("");
+      return;
+    }
+    setSigMode("type");
+    await ensureSigFonts();
+    renderTypedSignatures(name);
+    const signerInput = options.querySelector('input[name="signer_name"]');
+    if (signerInput && !signerInput.value.trim()) signerInput.value = name;
+  };
+
+  if (generateBtn) generateBtn.addEventListener("click", () => runGenerate());
+  if (typeInput) {
+    typeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        runGenerate();
+      }
+    });
+    // Debounced live preview while typing
+    let timer = null;
+    typeInput.addEventListener("input", () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => runGenerate(), 350);
+    });
+  }
+
+  setSigMode("type");
+  ensureSigFonts().then(() => {
+    if (typeInput?.value.trim()) renderTypedSignatures(typeInput.value);
+    else renderTypedSignatures("");
+  });
+}
+
+function canvasHasInk(canvas) {
+  const ctx = canvas.getContext("2d");
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (pixels[i] < 250 || pixels[i + 1] < 250 || pixels[i + 2] < 250) return true;
+  }
+  return false;
+}
+
+function signatureBlob() {
+  return new Promise((resolve, reject) => {
+    if (sigMode === "upload" && sigUploadFile) {
+      resolve(sigUploadFile);
+      return;
+    }
+    if (sigMode === "type") {
+      if (!sigTypedSelected || !canvasHasInk(sigTypedSelected)) {
+        reject(new Error("Type your name and select a signature style."));
+        return;
+      }
+      sigTypedSelected.toBlob((blob) => {
+        if (!blob) reject(new Error("Could not capture typed signature."));
+        else resolve(new File([blob], "signature.png", { type: "image/png" }));
+      }, "image/png");
+      return;
+    }
+    if (!sigCanvas || !canvasHasInk(sigCanvas)) {
+      reject(new Error("Draw, type, or upload a signature first."));
+      return;
+    }
+    sigCanvas.toBlob((blob) => {
+      if (!blob) reject(new Error("Could not capture signature."));
+      else resolve(new File([blob], "signature.png", { type: "image/png" }));
+    }, "image/png");
+  });
+}
 
 function ensurePdfJs() {
   if (!window.pdfjsLib) throw new Error("PDF preview library is still loading. Try again in a moment.");
@@ -243,15 +785,110 @@ TOOLS.forEach((tool) => {
   grid.appendChild(btn);
 });
 
-document.getElementById("backBtn").addEventListener("click", () => {
+function showAllTools() {
   workspace.hidden = true;
   active = null;
   clearQueue();
   form.reset();
+  hideDeliveryPanel();
   statusEl.textContent = "";
   statusEl.className = "status";
   document.querySelectorAll(".tool-card.active").forEach((el) => el.classList.remove("active"));
   grid.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+const backBtn = document.getElementById("backBtn");
+if (backBtn) backBtn.addEventListener("click", () => showAllTools());
+
+/* ——— Hamburger dropdown ——— */
+const menuToggle = document.getElementById("menuToggle");
+const menuBackdrop = document.getElementById("menuBackdrop");
+const menuDropdown = document.getElementById("menuDropdown");
+const menuList = document.getElementById("menuList");
+const menuToolList = document.getElementById("menuToolList");
+let menuOpen = false;
+
+function renderMenuTools() {
+  if (!menuToolList) return;
+  menuToolList.innerHTML = "";
+  TOOLS.forEach((tool) => {
+    const li = document.createElement("li");
+    li.setAttribute("role", "none");
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dropdown-item";
+    btn.setAttribute("role", "menuitem");
+    btn.dataset.toolId = tool.id;
+    if (active?.id === tool.id) btn.classList.add("active");
+    btn.textContent = tool.title;
+    li.appendChild(btn);
+    menuToolList.appendChild(li);
+  });
+}
+
+function openToolsMenu() {
+  if (!menuDropdown || !menuList) {
+    console.warn("Menu elements missing", { menuDropdown, menuList });
+    return;
+  }
+  menuOpen = true;
+  menuDropdown.classList.add("is-open");
+  menuList.setAttribute("aria-hidden", "false");
+  if (menuBackdrop) menuBackdrop.classList.add("is-visible");
+  if (menuToggle) menuToggle.setAttribute("aria-expanded", "true");
+  document.body.classList.add("menu-open");
+  renderMenuTools();
+}
+
+function closeToolsMenu() {
+  menuOpen = false;
+  if (menuDropdown) menuDropdown.classList.remove("is-open");
+  if (menuList) menuList.setAttribute("aria-hidden", "true");
+  if (menuBackdrop) menuBackdrop.classList.remove("is-visible");
+  if (menuToggle) menuToggle.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("menu-open");
+}
+
+function toggleToolsMenu(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  if (menuOpen) closeToolsMenu();
+  else openToolsMenu();
+}
+
+if (menuToggle) {
+  menuToggle.addEventListener("click", toggleToolsMenu);
+} else {
+  console.warn("menuToggle not found");
+}
+
+if (menuBackdrop) {
+  menuBackdrop.addEventListener("click", () => closeToolsMenu());
+}
+
+if (menuDropdown) {
+  menuDropdown.addEventListener("click", (e) => {
+    const home = e.target.closest('[data-menu-action="home"]');
+    if (home) {
+      e.preventDefault();
+      closeToolsMenu();
+      showAllTools();
+      return;
+    }
+    const item = e.target.closest(".dropdown-item[data-tool-id]");
+    if (item) {
+      e.preventDefault();
+      const tool = TOOLS.find((t) => t.id === item.dataset.toolId);
+      closeToolsMenu();
+      if (tool) openTool(tool);
+    }
+  });
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && menuOpen) closeToolsMenu();
 });
 
 function scrollToUpload() {
@@ -312,6 +949,7 @@ function openTool(tool) {
   fileInput.value = "";
   statusEl.textContent = "";
   statusEl.className = "status";
+  hideDeliveryPanel();
   options.innerHTML = "";
   if (tool.id === "compress") {
     const report = document.createElement("div");
@@ -320,6 +958,47 @@ function openTool(tool) {
     report.innerHTML =
       "<strong>File size</strong><span data-size-current>Upload a PDF to see the current size.</span><span data-size-result hidden></span>";
     options.appendChild(report);
+  }
+  if (tool.signaturePad) {
+    const pad = document.createElement("div");
+    pad.className = "sig-pad";
+    pad.innerHTML = `
+      <strong>Signature</strong>
+      <div class="sig-mode-tabs" role="tablist" aria-label="Signature method">
+        <button type="button" class="editor-btn active" data-sig-mode-btn="type">Type name</button>
+        <button type="button" class="editor-btn" data-sig-mode-btn="draw">Draw</button>
+        <button type="button" class="editor-btn" data-sig-mode-btn="upload">Upload</button>
+      </div>
+
+      <div data-sig-pane="type">
+        <p class="hint">Type your name — we’ll generate several signature styles. Click one to select it.</p>
+        <div class="sig-type-row">
+          <label class="sr-only" for="sigTypeName">Name to sign</label>
+          <input type="text" id="sigTypeName" data-sig-type-name placeholder="Jane Doe" autocomplete="name" maxlength="60" />
+          <button type="button" class="editor-btn" data-sig-generate>Generate</button>
+        </div>
+        <div class="sig-style-grid" data-sig-style-grid></div>
+      </div>
+
+      <div data-sig-pane="draw" hidden>
+        <p class="hint">Draw with your mouse or finger.</p>
+        <canvas data-sig-canvas width="560" height="180" aria-label="Signature pad"></canvas>
+        <div class="sig-actions">
+          <button type="button" class="editor-btn" data-sig-clear>Clear</button>
+        </div>
+      </div>
+
+      <div data-sig-pane="upload" hidden>
+        <p class="hint">Upload a PNG or JPG of your signature (transparent background works best).</p>
+        <div class="sig-actions">
+          <label class="editor-btn sig-upload-label">Choose image
+            <input type="file" data-sig-upload accept="image/png,image/jpeg,image/jpg,image/webp" hidden />
+          </label>
+        </div>
+        <img data-sig-upload-preview class="sig-upload-preview" alt="Uploaded signature preview" hidden />
+      </div>`;
+    options.appendChild(pad);
+    setupSignaturePad(pad);
   }
   (tool.fields || []).forEach((field) => {
     const label = document.createElement("label");
@@ -333,6 +1012,8 @@ function openTool(tool) {
         o.value = opt.value;
         o.textContent = opt.label;
         if (field.name === "level" && opt.value === "medium") o.selected = true;
+        if (field.name === "position" && opt.value === "bottom-right") o.selected = true;
+        if (field.name === "language" && opt.value === "eng") o.selected = true;
         input.appendChild(o);
       });
     } else {
@@ -747,7 +1428,13 @@ form.addEventListener("submit", async (e) => {
       const base = (queue[0]?.file?.name || "document").replace(/\.pdf$/i, "");
       const edited = await editor.exportPdfFile(`${base}-edited.pdf`);
       downloadBlob(edited, edited.name);
-      setStatus("Done — edited PDF download started.", false);
+      showDeliveryPanel(edited, edited.name);
+      setStatus(
+        emailEnabled
+          ? "Done — edited PDF download started. You can email or share a temporary link below."
+          : "Done — edited PDF download started. You can share a temporary link below.",
+        false
+      );
       return;
     }
 
@@ -767,6 +1454,11 @@ form.addEventListener("submit", async (e) => {
       if (el.name) fd.append(el.name, el.value);
     });
 
+    if (active.signaturePad) {
+      const sig = await signatureBlob();
+      fd.append("signature", sig, sig.name || "signature.png");
+    }
+
     const res = await fetch(active.endpoint, { method: "POST", body: fd });
     if (!res.ok) {
       let msg = `Error ${res.status}`;
@@ -784,6 +1476,7 @@ form.addEventListener("submit", async (e) => {
     const match = /filename="?([^";]+)"?/i.exec(cd);
     const name = match?.[1] || guessName(active.id, blob.type);
     downloadBlob(blob, name);
+    showDeliveryPanel(blob, name);
 
     if (active.id === "compress") {
       const original = Number(res.headers.get("X-Original-Size")) || queueOriginalBytes() || 0;
@@ -803,7 +1496,12 @@ form.addEventListener("submit", async (e) => {
         );
       }
     } else {
-      setStatus("Done — download started.", false);
+      setStatus(
+        emailEnabled
+          ? "Done — download started. You can email or share a temporary link below."
+          : "Done — download started. You can share a temporary link below.",
+        false
+      );
     }
   } catch (err) {
     setStatus(err.message || String(err), true);

@@ -11,6 +11,15 @@ services:
       MAX_UPLOAD_MB: "100"
       MAX_COMPRESS_MB: "100"
       TOOLS_TMP: /tmp/devstrand-tools
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_TLS: ${SMTP_TLS:-true}
+      EMAIL_MAX_MB: ${EMAIL_MAX_MB:-20}
+      SHARE_MAX_MB: ${SHARE_MAX_MB:-50}
+      SHARE_RATE_LIMIT: ${SHARE_RATE_LIMIT:-20}
     volumes:
       - ./frontend:/app/frontend:ro
     restart: unless-stopped

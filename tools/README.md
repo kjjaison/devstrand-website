@@ -16,8 +16,40 @@ PDF & document utilities for DevStrand. Runs in **Docker** (LibreOffice + FastAP
 | PDF → Word | LibreOffice or `pdf2docx` |
 | PDF → Excel | Table/text extract (`pdfplumber`) |
 | PDF → PowerPoint | One image slide per page |
+| OCR PDF | Tesseract via `ocrmypdf` — searchable text layer |
+| E-sign PDF | Draw or upload signature and stamp onto pages |
+| Email result | Optional SMTP — send processed file to an address |
+| Shareable link | Temporary download URL (15m / 1h / 6h / 24h), then deleted |
 
-Upload limit default: **100 MB** per file.
+Upload limit default: **100 MB** per file. Email attachments default max **20 MB**. Share links default max **50 MB**.
+
+**Privacy:** No permanent document archive. Processing uses temp dirs; share folders are purged on expiry.
+---
+
+## Email delivery (optional)
+
+After a tool finishes, users can email a copy of the result. This stays **off** until SMTP is set.
+
+1. Add to `tools/.env` (same file as the tunnel token):
+
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-user
+SMTP_PASSWORD=your-password
+SMTP_FROM=tools@devstrand.com
+SMTP_TLS=true
+```
+
+2. Restart:
+
+```bash
+docker compose up -d --force-recreate tools
+```
+
+3. Check `GET /api/health` — `"email_enabled": true`.
+
+Common providers: Google Workspace (SMTP relay / app password), Microsoft 365, [Resend](https://resend.com) SMTP, Mailgun SMTP. Use a real From address on a domain you control so messages are less likely to land in spam.
 
 ---
 
