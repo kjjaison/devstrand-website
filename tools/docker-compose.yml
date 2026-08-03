@@ -8,7 +8,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      MAX_UPLOAD_MB: "25"
+      MAX_UPLOAD_MB: "100"
       MAX_COMPRESS_MB: "100"
       TOOLS_TMP: /tmp/devstrand-tools
     volumes:
@@ -18,13 +18,21 @@ services:
       - toolsnet
 
   # Exposes tools.devstrand.com without a static IP or open ports.
-  # Requires CLOUDFLARE_TUNNEL_TOKEN in .env (see README).
+  # Requires CLOUDFLARE_TUNNEL_TOKEN in tools/.env
+  #
+  # Cloudflare Public Hostname must be:
+  #   Type: HTTP
+  #   URL:  http://host.docker.internal:8080
+  # Do NOT use https:// or the hostname "tools" unless cloudflared is
+  # started by this compose file on toolsnet.
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in tools/.env}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - tools
     networks:

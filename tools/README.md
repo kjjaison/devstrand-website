@@ -7,7 +7,7 @@ PDF & document utilities for DevStrand. Runs in **Docker** (LibreOffice + FastAP
 
 | Tool | Notes |
 |------|--------|
-| Merge / Split / Compress PDF | `pypdf` |
+| Merge / Split / Compress PDF | `pypdf` + Ghostscript (compress levels: low → maximum) |
 | Edit PDF | Header/footer text + rotate |
 | Watermark PDF | Diagonal text stamp |
 | PDF ↔ JPG | Poppler + Pillow |
@@ -17,7 +17,7 @@ PDF & document utilities for DevStrand. Runs in **Docker** (LibreOffice + FastAP
 | PDF → Excel | Table/text extract (`pdfplumber`) |
 | PDF → PowerPoint | One image slide per page |
 
-Upload limit default: **25 MB** (Compress PDF: **100 MB**).
+Upload limit default: **100 MB** per file.
 
 ---
 
@@ -76,12 +76,15 @@ Still in the tunnel wizard / tunnel **Public Hostname** tab:
 | Subdomain | `tools` |
 | Domain | `devstrand.com` |
 | Type | `HTTP` |
-| URL | `tools:8080` |
+| URL | `http://host.docker.internal:8080` |
 
-Important: use hostname **`tools`** (the Docker Compose service name), **not** `localhost`.  
-Both containers share the `toolsnet` network, so `cloudflared` can reach `http://tools:8080`.
+**Do not use** `localhost`, `https://…`, or `tools:8080` if you started cloudflared with Cloudflare’s plain `docker run` command (that container is not on the Compose network, so `tools` won’t resolve).
+
+`host.docker.internal` reaches the tools app published on your PC’s port **8080** (Docker Desktop).
 
 Save. Cloudflare will create the DNS CNAME for `tools.devstrand.com` automatically.
+
+> Run **only one** cloudflared. Extra `docker run cloudflare/cloudflared …` containers fight the Compose one and often cause `no such host` / `connection refused` errors.
 
 ### D. Start both containers
 

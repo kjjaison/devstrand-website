@@ -25,8 +25,8 @@ FRONTEND = APP_ROOT / "frontend"
 TMP = Path(os.environ.get("TOOLS_TMP", "/tmp/devstrand-tools"))
 TMP.mkdir(parents=True, exist_ok=True)
 
-MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "25"))
-MAX_COMPRESS_MB = int(os.environ.get("MAX_COMPRESS_MB", "100"))
+MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "100"))
+MAX_COMPRESS_MB = int(os.environ.get("MAX_COMPRESS_MB", str(MAX_UPLOAD_MB)))
 MAX_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 MAX_COMPRESS_BYTES = MAX_COMPRESS_MB * 1024 * 1024
 
@@ -36,6 +36,12 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=[
+        "Content-Disposition",
+        "X-Original-Size",
+        "X-Compressed-Size",
+        "X-Compression-Level",
+    ],
 )
 
 
@@ -111,21 +117,138 @@ def _libreoffice_convert(src: Path, out_dir: Path, target: str) -> Path:
     return outputs[0]
 
 
-def _file_response(path: Path, download_name: str, media: str) -> FileResponse:
+def _file_response(
+    path: Path,
+    download_name: str,
+    media: str,
+    extra_headers: dict[str, str] | None = None,
+) -> FileResponse:
     return FileResponse(
         path,
         media_type=media,
         filename=download_name,
         background=None,
+        headers=extra_headers or {},
     )
+
+
+def _compress_with_ghostscript(src: Path, dst: Path, level: str) -> bool:
+    """Return True if Ghostscript produced dst successfully."""
+    if not shutil.which("gs"):
+        return False
+
+    # low = best quality / least shrink … maximum = smallest file
+    pdfsettings = {
+        "low": "/printer",
+        "medium": "/ebook",
+        "high": "/screen",
+        "maximum": "/screen",
+    }.get(level, "/ebook")
+
+    cmd = [
+        "gs",
+        "-sDEVICE=pdfwrite",
+        "-dCompatibilityLevel=1.4",
+        f"-dPDFSETTINGS={pdfsettings}",
+        "-dNOPAUSE",
+        "-dQUIET",
+        "-dBATCH",
+        "-dDetectDuplicateImages=true",
+        "-dCompressFonts=true",
+        "-dSubsetFonts=true",
+    ]
+    if level == "maximum":
+        cmd.extend(
+            [
+                "-dColorImageResolution=72",
+                "-dGrayImageResolution=72",
+                "-dMonoImageResolution=72",
+                "-dDownsampleColorImages=true",
+                "-dDownsampleGrayImages=true",
+                "-dDownsampleMonoImages=true",
+                "-dColorImageDownsampleType=/Bicubic",
+                "-dGrayImageDownsampleType=/Bicubic",
+            ]
+        )
+    elif level == "high":
+        cmd.extend(
+            [
+                "-dColorImageResolution=100",
+                "-dGrayImageResolution=100",
+                "-dDownsampleColorImages=true",
+                "-dDownsampleGrayImages=true",
+            ]
+        )
+
+    cmd.extend([f"-sOutputFile={dst}", str(src)])
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180, check=False)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0 and dst.exists() and dst.stat().st_size > 0
+
+
+def _compress_with_pypdf(data: bytes, level: str) -> bytes:
+    """Fallback compressor: content-stream deflate + object dedupe."""
+    zlib_level = {"low": 6, "medium": 9, "high": 9, "maximum": 9}.get(level, 9)
+    writer = PdfWriter(clone_from=io.BytesIO(data))
+    for page in writer.pages:
+        try:
+            page.compress_content_streams(level=zlib_level)
+        except Exception:
+            try:
+                page.compress_content_streams()
+            except Exception:
+                pass
+    try:
+        writer.compress_identical_objects(remove_identicals=True, remove_orphans=True)
+    except Exception:
+        pass
+    buf = io.BytesIO()
+    writer.write(buf)
+    return buf.getvalue()
+
+
+def _compress_pdf(data: bytes, level: str, work: Path) -> tuple[Path, str]:
+    """
+    Compress PDF. Prefers Ghostscript when installed; falls back to pypdf.
+    Returns (output_path, engine_name).
+    """
+    level = (level or "medium").lower().strip()
+    if level not in {"low", "medium", "high", "maximum"}:
+        level = "medium"
+
+    src = work / "input.pdf"
+    src.write_bytes(data)
+    out = work / "compressed.pdf"
+
+    if _compress_with_ghostscript(src, out, level):
+        # If GS somehow grew the file, keep the smaller of GS vs light pypdf.
+        gs_bytes = out.read_bytes()
+        if len(gs_bytes) >= len(data) and level in {"low", "medium"}:
+            light = _compress_with_pypdf(data, level)
+            if len(light) < len(gs_bytes):
+                out.write_bytes(light)
+                return out, "pypdf"
+        return out, "ghostscript"
+
+    compressed = _compress_with_pypdf(data, level)
+    # Never return a larger file than the original for stream-only compress.
+    if len(compressed) >= len(data):
+        out.write_bytes(data)
+    else:
+        out.write_bytes(compressed)
+    return out, "pypdf"
 
 
 @app.get("/api/health")
 def health():
     has_lo = shutil.which("soffice") is not None
+    has_gs = shutil.which("gs") is not None
     return {
         "ok": True,
         "libreoffice": has_lo,
+        "ghostscript": has_gs,
         "max_upload_mb": MAX_UPLOAD_MB,
         "max_compress_mb": MAX_COMPRESS_MB,
     }
@@ -220,23 +343,27 @@ def _parse_ranges(spec: str, page_count: int) -> list[list[int]]:
 
 
 @app.post("/api/compress")
-async def compress_pdf(file: UploadFile = File(...)):
+async def compress_pdf(
+    file: UploadFile = File(...),
+    level: str = Form("medium"),
+):
     data = await _read_upload(file, max_bytes=MAX_COMPRESS_BYTES, max_mb=MAX_COMPRESS_MB)
     work = _workdir()
     try:
-        reader = PdfReader(io.BytesIO(data))
-        writer = PdfWriter()
-        for page in reader.pages:
-            page.compress_content_streams()
-            writer.add_page(page)
-        try:
-            writer.compress_identical_objects(remove_identicals=True, remove_orphans=True)
-        except Exception:
-            pass
-        out = work / "compressed.pdf"
-        with out.open("wb") as fh:
-            writer.write(fh)
-        return _file_response(out, "compressed.pdf", "application/pdf")
+        out, engine = _compress_pdf(data, level, work)
+        original = len(data)
+        compressed = out.stat().st_size
+        return _file_response(
+            out,
+            "compressed.pdf",
+            "application/pdf",
+            extra_headers={
+                "X-Original-Size": str(original),
+                "X-Compressed-Size": str(compressed),
+                "X-Compression-Level": (level or "medium").lower().strip(),
+                "X-Compression-Engine": engine,
+            },
+        )
     except HTTPException:
         raise
     except Exception as exc:

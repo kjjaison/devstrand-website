@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice-calc \
     libreoffice-impress \
     poppler-utils \
+    ghostscript \
     fonts-dejavu \
     fonts-liberation \
     && rm -rf /var/lib/apt/lists/*

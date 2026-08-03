@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tools — DEVSTRAND</title>
-  <meta name="description" content="DevStrand tools — PDF manipulation and utilities. Currently under maintenance while we finish secure access setup." />
+  <title>Tools — DevStrand</title>
+  <meta name="description" content="DevStrand PDF &amp; document tools — merge, split, compress, convert, and edit PDFs." />
   <link rel="canonical" href="https://devstrand.com/tools.html" />
-  <meta name="robots" content="noindex, follow" />
+  <meta property="og:title" content="Tools — DevStrand" />
+  <meta property="og:description" content="Merge, split, compress, convert, and edit PDFs with DevStrand Tools." />
+  <meta property="og:image" content="https://devstrand.com/assets/logo.png" />
+  <meta property="og:url" content="https://devstrand.com/tools.html" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
@@ -30,7 +33,7 @@
         <a href="industries.html">Industries</a>
         <a href="portfolio.html">Portfolio</a>
         <a href="technologies.html">Technologies</a>
-        <a href="tools.html">Tools</a>
+        <a href="tools.html" class="active">Tools</a>
         <a href="contact.html">Contact</a>
       </nav>
       <div class="header-actions">
@@ -51,19 +54,26 @@
       <div class="container">
         <span class="section-label">Tools</span>
         <h1>PDF tools</h1>
-        <p>Merge, split, compress, and manage PDFs — launching here once secure access is ready.</p>
+        <p>Merge, split, compress, convert, and edit PDFs — free utilities from DevStrand.</p>
       </div>
     </section>
 
     <section class="section" style="padding-top: 0">
-      <div class="container">
-        <div class="maintenance-panel reveal" role="status">
-          <span class="maintenance-badge">Under maintenance</span>
-          <h2>We're finishing the secure connection</h2>
-          <p>The PDF manipulation app will be available on this page after Cloudflare Tunnel setup is complete. Check back soon, or contact us if you need help with a document workflow in the meantime.</p>
-          <div class="hero-cta" style="margin-top: 1.5rem">
+      <div class="container" style="max-width: 40rem">
+        <div id="tools-checking" class="feature-row reveal" style="text-align: center">
+          <p class="section-lead" style="margin: 0">Checking if tools are online…</p>
+        </div>
+
+        <div id="tools-offline" class="feature-row reveal" hidden>
+          <p style="display: inline-block; margin: 0 0 1rem; padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid var(--line); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted)">Temporarily unavailable</p>
+          <h2 class="section-title" style="font-size: clamp(1.4rem, 3vw, 1.85rem)">PDF tools are offline right now</h2>
+          <p class="section-lead">
+            Please try again shortly. If you need help with a document workflow in the meantime, get in touch and we’ll assist you.
+          </p>
+          <div class="hero-cta" style="margin-top: 1.5rem; justify-content: flex-start">
             <a class="btn btn-primary" href="contact.html">Contact DevStrand</a>
             <a class="btn btn-ghost" href="services.html">View services</a>
+            <a class="btn btn-ghost" id="tools-retry" href="https://tools.devstrand.com/">Try again</a>
           </div>
         </div>
       </div>
@@ -74,7 +84,10 @@
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand">
-          <a class="logo" href="index.html"><img class="logo-icon" src="assets/logo-icon.png" alt="" width="40" height="40" /><span class="logo-text">Dev<span>Strand</span></span></a>
+          <a class="logo" href="index.html">
+            <img class="logo-icon" src="assets/logo-icon.png" alt="" width="40" height="40" />
+            <span class="logo-text">Dev<span>Strand</span></span>
+          </a>
           <p>Irish software company — database development, AI, and web &amp; mobile solutions.</p>
         </div>
         <div class="footer-col">
@@ -94,6 +107,7 @@
           <h4>Connect</h4>
           <a href="mailto:info@devstrand.com">Email</a>
           <a href="https://www.linkedin.com/company/devstrand" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a href="https://tools.devstrand.com" target="_blank" rel="noopener noreferrer">PDF Tools</a>
         </div>
       </div>
       <div class="footer-bottom">
@@ -103,6 +117,63 @@
     </div>
   </footer>
 
-  <script src="js/main.js"></script>
+  <script src="js/main.js" defer></script>
+  <script>
+    (function () {
+      var TOOLS_URL = "https://tools.devstrand.com/";
+      var HEALTH_URL = "https://tools.devstrand.com/api/health";
+      var checking = document.getElementById("tools-checking");
+      var offline = document.getElementById("tools-offline");
+      var retry = document.getElementById("tools-retry");
+
+      function showOffline() {
+        if (checking) checking.hidden = true;
+        if (offline) offline.hidden = false;
+      }
+
+      function goOnline() {
+        window.location.replace(TOOLS_URL);
+      }
+
+      async function probe() {
+        var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+        var timer = setTimeout(function () {
+          if (ctrl) ctrl.abort();
+        }, 4000);
+        try {
+          var res = await fetch(HEALTH_URL, {
+            method: "GET",
+            mode: "cors",
+            cache: "no-store",
+            signal: ctrl ? ctrl.signal : undefined,
+          });
+          clearTimeout(timer);
+          if (!res.ok) throw new Error("bad status");
+          var data = await res.json().catch(function () {
+            return {};
+          });
+          if (data && data.ok === false) throw new Error("unhealthy");
+          goOnline();
+        } catch (_) {
+          clearTimeout(timer);
+          showOffline();
+        }
+      }
+
+      if (retry) {
+        retry.addEventListener("click", function (e) {
+          e.preventDefault();
+          if (checking) {
+            checking.hidden = false;
+            checking.querySelector("p").textContent = "Checking again…";
+          }
+          if (offline) offline.hidden = true;
+          probe();
+        });
+      }
+
+      probe();
+    })();
+  </script>
 </body>
 </html>

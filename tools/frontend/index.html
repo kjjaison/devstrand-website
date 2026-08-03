@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/styles.css?v=2" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=10" />
   <link rel="icon" href="https://devstrand.com/assets/logo-icon.png" type="image/png" />
 </head>
 <body>
@@ -29,7 +29,7 @@
     <section class="hero">
       <p class="eyebrow">tools.devstrand.com</p>
       <h1>PDF &amp; document tools</h1>
-      <p class="lead">Merge, split, compress, convert, and lightly edit — files processed on your private tools server. Max 25&nbsp;MB per file (100&nbsp;MB for Compress PDF).</p>
+      <p class="lead">Merge, split, compress, convert, and edit — drag to reorder, and use the interactive editor to add text or images. Max 100&nbsp;MB per file.</p>
     </section>
 
     <section class="tool-grid" id="tools"></section>
@@ -43,8 +43,73 @@
           <input type="file" id="fileInput" multiple />
           <p><strong id="dropTitle">Drop files here</strong> or click to browse</p>
           <p class="hint" id="fileHint"></p>
-          <ul class="file-list" id="fileList"></ul>
         </div>
+
+        <div class="sort-panel" id="sortPanel" hidden>
+          <div class="sort-head">
+            <div>
+              <h3>Arrange &amp; preview</h3>
+              <p class="hint" id="sortHint">Drag tiles to change order. Click a tile for a large preview.</p>
+            </div>
+            <div class="sort-zoom-bar">
+              <button type="button" class="editor-btn" id="sortZoomOut" title="Zoom out">−</button>
+              <span class="editor-zoom" id="sortZoomLabel">100%</span>
+              <button type="button" class="editor-btn" id="sortZoomIn" title="Zoom in">+</button>
+              <button type="button" class="editor-btn" id="sortZoomFit">Fit width</button>
+            </div>
+          </div>
+          <div class="sort-workspace">
+            <div class="sort-gallery" id="sortGallery" aria-label="Reorderable pages and files"></div>
+            <div class="sort-stage-wrap" id="sortStageWrap">
+              <div class="sort-stage" id="sortStage">
+                <canvas id="sortCanvas"></canvas>
+                <img id="sortImagePreview" alt="Preview" hidden />
+                <p class="sort-empty hint" id="sortEmpty">Select an item to preview</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pdf-editor" id="pdfEditor" hidden>
+          <div class="editor-toolbar">
+            <button type="button" class="editor-btn active" data-editor-mode="select">Select / Move</button>
+            <button type="button" class="editor-btn" data-editor-mode="text">Add text</button>
+            <button type="button" class="editor-btn" data-editor-mode="image">Add image</button>
+            <button type="button" class="editor-btn" data-editor-edit-text>Edit text</button>
+            <button type="button" class="editor-btn danger" data-editor-delete>Delete selected</button>
+            <button type="button" class="editor-btn" data-editor-clear-page>Clear overlays</button>
+            <span class="editor-sep" aria-hidden="true"></span>
+            <button type="button" class="editor-btn" data-editor-add-page>+ Blank page</button>
+            <button type="button" class="editor-btn" data-editor-duplicate-page>Duplicate page</button>
+            <button type="button" class="editor-btn danger" data-editor-remove-page>Remove page</button>
+            <span class="editor-sep" aria-hidden="true"></span>
+            <button type="button" class="editor-btn" data-editor-zoom-out title="Zoom out">−</button>
+            <span class="editor-zoom" data-editor-zoom-label>160%</span>
+            <button type="button" class="editor-btn" data-editor-zoom-in title="Zoom in">+</button>
+            <button type="button" class="editor-btn" data-editor-zoom-fit>Fit width</button>
+            <label class="editor-field">Font
+              <select data-editor-font-family></select>
+            </label>
+            <label class="editor-field">Size
+              <input type="number" data-editor-font-size value="22" min="8" max="120" />
+            </label>
+            <label class="editor-field">Color
+              <input type="color" data-editor-color value="#111111" />
+            </label>
+            <input type="file" data-editor-image accept="image/png,image/jpeg,image/jpg" hidden />
+          </div>
+          <p class="hint" data-editor-status>Upload a PDF, then double-click existing or added text to edit it.</p>
+          <div class="editor-body">
+            <div class="editor-thumbs" data-editor-thumbs></div>
+            <div class="editor-stage-wrap" data-editor-stage-wrap>
+              <div class="editor-stage" data-editor-stage>
+                <canvas data-editor-canvas></canvas>
+                <div class="editor-layer" data-editor-layer></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="options" id="options"></div>
         <button type="submit" class="btn" id="runBtn">Run</button>
         <p class="status" id="status" role="status"></p>
@@ -56,6 +121,10 @@
     <p>© <span id="year"></span> DevStrand · CRO 821307 · Files are processed ephemerally on the tools server.</p>
   </footer>
 
-  <script src="/static/js/app.js?v=2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
+  <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js" defer></script>
+  <script src="/static/js/editor.js?v=8" defer></script>
+  <script src="/static/js/app.js?v=9" defer></script>
 </body>
 </html>
