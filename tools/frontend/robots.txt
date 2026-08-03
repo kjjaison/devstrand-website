@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://devstrand.com/sitemap.xml
 Sitemap: https://tools.devstrand.com/sitemap.xml

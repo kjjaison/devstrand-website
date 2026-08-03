@@ -3,18 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tools — DevStrand</title>
-  <meta name="description" content="DevStrand PDF &amp; document tools — merge, split, compress, convert, and edit PDFs." />
+  <title>Free PDF Merge, Split, Compress &amp; Edit Tools | DevStrand</title>
+  <meta name="description" content="Free online PDF tools from DevStrand: merge PDF, combine PDF, split PDF, compress PDF, edit PDF text, JPG to PDF, PDF to JPG, Word to PDF, and more. Fast, private document utilities." />
+  <meta name="keywords" content="PDF merge, merge PDF, combine PDF, split PDF, compress PDF, edit PDF, JPG to PDF, PDF to JPG, PDF to Word, Word to PDF, free PDF tools, online PDF editor" />
   <link rel="canonical" href="https://devstrand.com/tools.html" />
-  <meta property="og:title" content="Tools — DevStrand" />
-  <meta property="og:description" content="Merge, split, compress, convert, and edit PDFs with DevStrand Tools." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Free PDF Merge, Split, Compress &amp; Edit Tools | DevStrand" />
+  <meta property="og:description" content="Merge, split, combine, compress, and edit PDFs online. Also JPG↔PDF, Word, Excel, and PowerPoint conversion." />
   <meta property="og:image" content="https://devstrand.com/assets/logo.png" />
   <meta property="og:url" content="https://devstrand.com/tools.html" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Free PDF Tools — Merge, Split, Compress, Edit | DevStrand" />
+  <meta name="twitter:description" content="Online PDF merge, split, compress, edit, JPG to PDF, and document conversion tools from DevStrand." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="icon" href="assets/logo-icon.png" type="image/png" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Free PDF Merge, Split, Compress & Edit Tools",
+    "url": "https://devstrand.com/tools.html",
+    "description": "Free online PDF tools: merge PDF, combine PDF, split PDF, compress PDF, edit PDF, JPG to PDF, and document converters.",
+    "isPartOf": { "@type": "WebSite", "name": "DevStrand", "url": "https://devstrand.com" },
+    "mainEntity": {
+      "@type": "ItemList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Merge PDF / Combine PDF", "url": "https://tools.devstrand.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Split PDF", "url": "https://tools.devstrand.com/" },
+        { "@type": "ListItem", "position": 3, "name": "Compress PDF", "url": "https://tools.devstrand.com/" },
+        { "@type": "ListItem", "position": 4, "name": "Edit PDF", "url": "https://tools.devstrand.com/" },
+        { "@type": "ListItem", "position": 5, "name": "JPG to PDF", "url": "https://tools.devstrand.com/" },
+        { "@type": "ListItem", "position": 6, "name": "PDF to JPG", "url": "https://tools.devstrand.com/" },
+        { "@type": "ListItem", "position": 7, "name": "PDF to Word", "url": "https://tools.devstrand.com/" },
+        { "@type": "ListItem", "position": 8, "name": "Word to PDF", "url": "https://tools.devstrand.com/" }
+      ]
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "DevStrand PDF Tools",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "url": "https://tools.devstrand.com/",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+    "description": "Browser-based PDF merge, split, compress, edit, watermark, JPG to PDF, and Office conversion tools."
+  }
+  </script>
 </head>
 <body>
   <div class="page-bg" aria-hidden="true"></div>
@@ -52,19 +92,62 @@
   <main>
     <section class="page-hero">
       <div class="container">
-        <span class="section-label">Tools</span>
-        <h1>PDF tools</h1>
-        <p>Merge, split, compress, convert, and edit PDFs — free utilities from DevStrand.</p>
+        <span class="section-label">Free PDF tools</span>
+        <h1>Merge, split, compress &amp; edit PDFs online</h1>
+        <p>
+          Free PDF manipulation tools from DevStrand — combine PDFs, split pages, compress large files,
+          edit text, convert JPG to PDF, PDF to JPG, Word, Excel, and more. Up to 100&nbsp;MB per file.
+        </p>
+        <div class="hero-cta" style="margin-top: 1.25rem; justify-content: flex-start">
+          <a class="btn btn-primary" id="tools-open" href="https://tools.devstrand.com/">Open PDF tools</a>
+          <a class="btn btn-ghost" href="#pdf-tools-list">See all tools</a>
+        </div>
+        <p id="tools-status" class="section-lead" style="margin-top: 1rem; font-size: 0.95rem" role="status">Checking availability…</p>
       </div>
     </section>
 
-    <section class="section" style="padding-top: 0">
-      <div class="container" style="max-width: 40rem">
-        <div id="tools-checking" class="feature-row reveal" style="text-align: center">
-          <p class="section-lead" style="margin: 0">Checking if tools are online…</p>
+    <section class="section" id="pdf-tools-list" style="padding-top: 0">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="section-label">What you can do</span>
+          <h2 class="section-title">PDF merge, split, combine, edit &amp; convert</h2>
+          <p class="section-lead">
+            Search for PDF merge, PDF split, combine PDF, compress PDF, edit PDF, or JPG to PDF —
+            then open the matching tool on tools.devstrand.com.
+          </p>
+        </div>
+        <div class="feature-list">
+          <div class="feature-row reveal">
+            <h3><a href="https://tools.devstrand.com/">Merge PDF / Combine PDF</a></h3>
+            <p>Join multiple PDF files into one document. Drag to set page order before you merge.</p>
+          </div>
+          <div class="feature-row reveal">
+            <h3><a href="https://tools.devstrand.com/">Split PDF</a></h3>
+            <p>Split a PDF into separate pages or custom page ranges — ideal for extracting chapters or invoices.</p>
+          </div>
+          <div class="feature-row reveal">
+            <h3><a href="https://tools.devstrand.com/">Compress PDF</a></h3>
+            <p>Reduce PDF file size with low to maximum compression levels while keeping text readable.</p>
+          </div>
+          <div class="feature-row reveal">
+            <h3><a href="https://tools.devstrand.com/">Edit PDF</a></h3>
+            <p>Edit existing PDF text, add new text or images, undo changes, and adjust fonts and colours.</p>
+          </div>
+          <div class="feature-row reveal">
+            <h3><a href="https://tools.devstrand.com/">JPG to PDF &amp; PDF to JPG</a></h3>
+            <p>Convert images to a multi-page PDF, or export PDF pages as JPG images.</p>
+          </div>
+          <div class="feature-row reveal">
+            <h3><a href="https://tools.devstrand.com/">PDF ↔ Word, Excel, PowerPoint</a></h3>
+            <p>Convert between PDF and Office formats for editing, sharing, and archiving.</p>
+          </div>
+          <div class="feature-row reveal">
+            <h3><a href="https://tools.devstrand.com/">Watermark PDF</a></h3>
+            <p>Stamp diagonal watermark text across every page for drafts, confidential files, or branding.</p>
+          </div>
         </div>
 
-        <div id="tools-offline" class="feature-row reveal" hidden>
+        <div id="tools-offline" class="feature-row reveal" hidden style="margin-top: 2rem">
           <p style="display: inline-block; margin: 0 0 1rem; padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid var(--line); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted)">Temporarily unavailable</p>
           <h2 class="section-title" style="font-size: clamp(1.4rem, 3vw, 1.85rem)">PDF tools are offline right now</h2>
           <p class="section-lead">
@@ -122,17 +205,25 @@
     (function () {
       var TOOLS_URL = "https://tools.devstrand.com/";
       var HEALTH_URL = "https://tools.devstrand.com/api/health";
-      var checking = document.getElementById("tools-checking");
+      var statusEl = document.getElementById("tools-status");
       var offline = document.getElementById("tools-offline");
       var retry = document.getElementById("tools-retry");
+      var openBtn = document.getElementById("tools-open");
+
+      function setStatus(text) {
+        if (statusEl) statusEl.textContent = text;
+      }
 
       function showOffline() {
-        if (checking) checking.hidden = true;
         if (offline) offline.hidden = false;
+        setStatus("Tools are temporarily offline. You can still browse the list below.");
       }
 
       function goOnline() {
-        window.location.replace(TOOLS_URL);
+        setStatus("Tools are online — opening the app…");
+        window.setTimeout(function () {
+          window.location.href = TOOLS_URL;
+        }, 900);
       }
 
       async function probe() {
@@ -153,6 +244,7 @@
             return {};
           });
           if (data && data.ok === false) throw new Error("unhealthy");
+          if (offline) offline.hidden = true;
           goOnline();
         } catch (_) {
           clearTimeout(timer);
@@ -163,12 +255,14 @@
       if (retry) {
         retry.addEventListener("click", function (e) {
           e.preventDefault();
-          if (checking) {
-            checking.hidden = false;
-            checking.querySelector("p").textContent = "Checking again…";
-          }
           if (offline) offline.hidden = true;
+          setStatus("Checking again…");
           probe();
+        });
+      }
+      if (openBtn) {
+        openBtn.addEventListener("click", function () {
+          /* allow normal navigation */
         });
       }
 

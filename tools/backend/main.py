@@ -16,7 +16,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pypdf import PdfReader, PdfWriter
 
@@ -652,3 +652,18 @@ if FRONTEND.exists():
     def index():
         html = (FRONTEND / "index.html").read_text(encoding="utf-8")
         return HTMLResponse(html)
+
+    @app.get("/robots.txt", response_class=PlainTextResponse)
+    def robots_txt():
+        path = FRONTEND / "robots.txt"
+        return path.read_text(encoding="utf-8") if path.exists() else "User-agent: *\nAllow: /\n"
+
+    @app.get("/sitemap.xml")
+    def sitemap_xml():
+        path = FRONTEND / "sitemap.xml"
+        body = path.read_text(encoding="utf-8") if path.exists() else (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            "<url><loc>https://tools.devstrand.com/</loc></url></urlset>"
+        )
+        return Response(content=body, media_type="application/xml")
