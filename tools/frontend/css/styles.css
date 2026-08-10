@@ -1037,6 +1037,84 @@ body.menu-open .menu-toggle-bars::after {
   padding: 0.4rem;
 }
 
+.esign-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(46, 125, 255, 0.06);
+  margin: 0.75rem 0;
+}
+
+.esign-preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.esign-page-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 5.5rem;
+  text-align: center;
+}
+
+.esign-stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  background: #111;
+  touch-action: none;
+  user-select: none;
+}
+
+.esign-stage canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  vertical-align: top;
+}
+
+.esign-sig {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  border: 1px dashed rgba(46, 154, 255, 0.95);
+  background: rgba(255, 255, 255, 0.12);
+  cursor: move;
+  z-index: 2;
+}
+
+.esign-sig img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  background: transparent;
+}
+
+.esign-resize {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--brand);
+  border: 2px solid #fff;
+  cursor: nwse-resize;
+  z-index: 3;
+}
+
 .share-page {
   max-width: 36rem;
   padding-top: 4rem;

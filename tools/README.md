@@ -16,7 +16,7 @@ PDF & document utilities for DevStrand. Runs in **Docker** (LibreOffice + FastAP
 | PDF → Word | LibreOffice or `pdf2docx` |
 | PDF → Excel | Table/text extract (`pdfplumber`) |
 | PDF → PowerPoint | One image slide per page |
-| OCR PDF | Tesseract via `ocrmypdf` — searchable text layer |
+| OCR Document | PDF, images, Word/Excel/PowerPoint → searchable PDF (Tesseract / ocrmypdf) |
 | E-sign PDF | Draw or upload signature and stamp onto pages |
 | Email result | Optional SMTP — send processed file to an address |
 | Shareable link | Temporary download URL (15m / 1h / 6h / 24h), then deleted |

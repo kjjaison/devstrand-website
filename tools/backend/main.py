@@ -572,8 +572,12 @@ def share_page(token: str):
 
 
 @app.post("/api/ocr")
-async def ocr_pdf(file: UploadFile = File(...), language: str = Form("eng")):
-    """Make a scanned PDF searchable with OCR (Tesseract via ocrmypdf)."""
+async def ocr_document(
+    language: str = Form("eng"),
+    file: UploadFile | None = File(None),
+    files: list[UploadFile] | None = File(None),
+):
+    """OCR images, PDFs, Word/Excel/PowerPoint, and similar docs into a searchable PDF."""
     if shutil.which("tesseract") is None:
         raise HTTPException(503, "OCR is not available in this deployment (Tesseract missing).")
     try:
@@ -581,42 +585,139 @@ async def ocr_pdf(file: UploadFile = File(...), language: str = Form("eng")):
     except ImportError as exc:
         raise HTTPException(503, "OCR package is not installed.") from exc
 
-    lang = re.sub(r"[^a-zA-Z_+-]", "", language or "eng")[:32] or "eng"
-    data = await _read_upload(file)
-    work = _workdir()
-    src = work / "input.pdf"
-    out = work / "ocr.pdf"
-    src.write_bytes(data)
-    try:
-        ocrmypdf.ocr(
-            src,
-            out,
-            language=lang,
-            deskew=True,
-            rotate_pages=True,
-            force_ocr=False,
-            skip_text=False,
-            optimize=1,
-            progress_bar=False,
+    from PIL import Image as PILImage
+
+    uploads: list[UploadFile] = []
+    if files:
+        uploads.extend([f for f in files if f is not None and getattr(f, "filename", None)])
+    if file is not None and getattr(file, "filename", None):
+        uploads.append(file)
+    # Some clients send repeated "file" parts instead of "files"
+    if not uploads:
+        raise HTTPException(
+            400,
+            "Upload at least one file (PDF, image, Word, Excel, or PowerPoint).",
         )
-    except Exception as exc:
-        # Retry forcing OCR for image-only / mixed docs
+
+    lang = re.sub(r"[^a-zA-Z_+-]", "", language or "eng")[:32] or "eng"
+    work = _workdir()
+    image_exts = {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp", ".gif"}
+    office_exts = {
+        ".doc",
+        ".docx",
+        ".odt",
+        ".rtf",
+        ".txt",
+        ".xls",
+        ".xlsx",
+        ".ods",
+        ".csv",
+        ".ppt",
+        ".pptx",
+        ".odp",
+    }
+
+    pdf_parts: list[Path] = []
+    image_batch: list[PILImage.Image] = []
+
+    def flush_images() -> None:
+        nonlocal image_batch
+        if not image_batch:
+            return
+        out_pdf = work / f"images-{len(pdf_parts)}.pdf"
+        rgb_pages = [im.convert("RGB") for im in image_batch]
+        first, rest = rgb_pages[0], rgb_pages[1:]
+        first.save(out_pdf, save_all=bool(rest), append_images=rest)
+        pdf_parts.append(out_pdf)
+        image_batch = []
+
+    try:
+        for index, upload in enumerate(uploads):
+            data = await _read_upload(upload)
+            name = _safe_name(upload.filename, f"upload-{index}.bin")
+            ext = Path(name).suffix.lower()
+
+            if ext == ".pdf" or (upload.content_type or "").startswith("application/pdf"):
+                flush_images()
+                pdf_path = work / f"doc-{index}.pdf"
+                pdf_path.write_bytes(data)
+                pdf_parts.append(pdf_path)
+                continue
+
+            if ext in image_exts or (upload.content_type or "").startswith("image/"):
+                try:
+                    img = PILImage.open(io.BytesIO(data))
+                    img.load()
+                except Exception as exc:
+                    raise HTTPException(400, f"Could not read image “{name}”: {exc}") from exc
+                image_batch.append(img)
+                continue
+
+            if ext in office_exts:
+                flush_images()
+                src = work / f"office-{index}{ext}"
+                src.write_bytes(data)
+                converted = _libreoffice_convert(src, work, "pdf")
+                pdf_parts.append(converted)
+                continue
+
+            raise HTTPException(
+                400,
+                f"Unsupported file type for OCR: {ext or name}. "
+                "Use PDF, images (JPG/PNG/WebP/TIFF), Word, Excel, PowerPoint, or OpenDocument.",
+            )
+
+        flush_images()
+        if not pdf_parts:
+            raise HTTPException(400, "No convertible pages found for OCR.")
+
+        if len(pdf_parts) == 1:
+            src_pdf = pdf_parts[0]
+        else:
+            writer = PdfWriter()
+            for part in pdf_parts:
+                reader = PdfReader(str(part))
+                for page in reader.pages:
+                    writer.add_page(page)
+            src_pdf = work / "combined.pdf"
+            with src_pdf.open("wb") as fh:
+                writer.write(fh)
+
+        out = work / "ocr-searchable.pdf"
         try:
             ocrmypdf.ocr(
-                src,
+                src_pdf,
                 out,
                 language=lang,
                 deskew=True,
                 rotate_pages=True,
-                force_ocr=True,
+                force_ocr=False,
+                skip_text=False,
                 optimize=1,
                 progress_bar=False,
             )
-        except Exception as exc2:
-            raise HTTPException(400, f"OCR failed: {exc2}") from exc2
-    if not out.exists():
-        raise HTTPException(500, "OCR produced no output.")
-    return _file_response(out, "ocr-searchable.pdf", "application/pdf")
+        except Exception:
+            try:
+                ocrmypdf.ocr(
+                    src_pdf,
+                    out,
+                    language=lang,
+                    deskew=True,
+                    rotate_pages=True,
+                    force_ocr=True,
+                    optimize=1,
+                    progress_bar=False,
+                )
+            except Exception as exc2:
+                raise HTTPException(400, f"OCR failed: {exc2}") from exc2
+
+        if not out.exists():
+            raise HTTPException(500, "OCR produced no output.")
+        return _file_response(out, "ocr-searchable.pdf", "application/pdf")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(400, f"OCR failed: {exc}") from exc
 
 
 @app.post("/api/esign")
@@ -625,10 +726,15 @@ async def esign_pdf(
     signature: UploadFile = File(...),
     signer_name: str = Form(""),
     pages: str = Form("all"),
-    position: str = Form("bottom-right"),
+    position: str = Form("custom"),
     sig_width: float = Form(160),
+    x_pct: float | None = Form(None),
+    y_pct: float | None = Form(None),
+    positions_json: str = Form(""),
 ):
-    """Stamp a drawn/uploaded signature image onto PDF page(s)."""
+    """Stamp a signature onto PDF page(s). Per-page x/y via positions_json, or shared x_pct/y_pct."""
+    import json
+
     from PIL import Image as PILImage
     from reportlab.lib.utils import ImageReader
     from reportlab.pdfgen import canvas as rl_canvas
@@ -651,14 +757,43 @@ async def esign_pdf(
     if bbox:
         sig_img = sig_img.crop(bbox)
 
-    width_pt = max(40.0, min(float(sig_width), 400.0))
+    default_width_pt = max(40.0, min(float(sig_width), 400.0))
     aspect = sig_img.height / max(1, sig_img.width)
-    height_pt = width_pt * aspect
+    name_gap = 18.0 if signer_name.strip() else 0.0
 
     page_spec = (pages or "all").strip().lower()
-    pos = (position or "bottom-right").strip().lower()
-    if pos not in {"bottom-right", "bottom-left", "bottom-center", "center"}:
-        raise HTTPException(400, "Invalid position.")
+    pos = (position or "custom").strip().lower() or "custom"
+    presets = {"bottom-right", "bottom-left", "bottom-center", "center", "custom"}
+    # Newer clients send position=custom + positions_json; tolerate unknowns.
+    if pos not in presets:
+        if (positions_json or "").strip():
+            pos = "custom"
+        else:
+            raise HTTPException(400, "Invalid position.")
+
+    default_x, default_y = 0.62, 0.78
+    if x_pct is not None and y_pct is not None:
+        default_x = max(0.0, min(float(x_pct), 1.0))
+        default_y = max(0.0, min(float(y_pct), 1.0))
+
+    # Optional per-page placements: {"0":{"x":0.6,"y":0.8,"w":160}, ...}
+    page_placements: dict[int, dict[str, float]] = {}
+    if positions_json.strip():
+        try:
+            raw = json.loads(positions_json)
+            if not isinstance(raw, dict):
+                raise ValueError("positions_json must be an object")
+            for key, val in raw.items():
+                idx = int(key)
+                if not isinstance(val, dict):
+                    continue
+                page_placements[idx] = {
+                    "x": max(0.0, min(float(val.get("x", default_x)), 1.0)),
+                    "y": max(0.0, min(float(val.get("y", default_y)), 1.0)),
+                    "w": max(40.0, min(float(val.get("w", default_width_pt)), 400.0)),
+                }
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise HTTPException(400, f"Invalid positions_json: {exc}") from exc
 
     work = _workdir()
     try:
@@ -700,7 +835,24 @@ async def esign_pdf(
                 pw = float(box.width)
                 ph = float(box.height)
                 margin = 36.0
-                if pos == "bottom-left":
+                placement = page_placements.get(idx)
+                width_pt = default_width_pt
+                height_pt = width_pt * aspect
+
+                if pos == "custom" or placement:
+                    xp = default_x
+                    yp = default_y
+                    if placement:
+                        xp = placement["x"]
+                        yp = placement["y"]
+                        width_pt = placement["w"]
+                        height_pt = width_pt * aspect
+                    # x/y are top-left of signature in page fractions (CSS-like)
+                    x = xp * pw
+                    y = ph - (yp * ph) - height_pt - name_gap
+                    x = max(0.0, min(x, max(0.0, pw - width_pt)))
+                    y = max(0.0, min(y, max(0.0, ph - height_pt - name_gap)))
+                elif pos == "bottom-left":
                     x, y = margin, margin
                 elif pos == "bottom-center":
                     x, y = (pw - width_pt) / 2, margin
@@ -711,7 +863,14 @@ async def esign_pdf(
 
                 packet = io.BytesIO()
                 c = rl_canvas.Canvas(packet, pagesize=(pw, ph))
-                c.drawImage(sig_reader, x, y + (18 if signer_name.strip() else 0), width=width_pt, height=height_pt, mask="auto")
+                c.drawImage(
+                    sig_reader,
+                    x,
+                    y + name_gap,
+                    width=width_pt,
+                    height=height_pt,
+                    mask="auto",
+                )
                 if signer_name.strip():
                     c.setFillColor(HexColor("#222222"))
                     c.setFont("Helvetica", 9)

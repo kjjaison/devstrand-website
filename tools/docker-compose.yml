@@ -22,6 +22,7 @@ services:
       SHARE_RATE_LIMIT: ${SHARE_RATE_LIMIT:-20}
     volumes:
       - ./frontend:/app/frontend:ro
+      - ./backend:/app/backend:ro
     restart: unless-stopped
     networks:
       - toolsnet

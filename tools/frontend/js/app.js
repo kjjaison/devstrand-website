@@ -71,14 +71,15 @@ const TOOLS = [
   },
   {
     id: "ocr",
-    title: "OCR PDF",
-    desc: "Make scanned PDFs searchable with optical character recognition.",
-    keywords: "ocr scan searchable text recognition tesseract",
-    accept: ".pdf,application/pdf",
-    multiple: false,
+    title: "OCR Document",
+    desc: "OCR scanned PDFs, images, Word, Excel, and PowerPoint into a searchable PDF.",
+    keywords: "ocr scan searchable text recognition tesseract image word jpg png",
+    accept:
+      ".pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.bmp,.gif,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp,application/pdf,image/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    multiple: true,
     endpoint: "/api/ocr",
-    hint: "Upload a scanned or image-based PDF. OCR may take a minute on large files.",
-    reorder: "pages",
+    hint: "Upload PDF, images, Word, Excel, or PowerPoint. Multiple images become one searchable PDF. OCR can take a minute.",
+    reorder: "files",
     fields: [
       {
         name: "language",
@@ -99,27 +100,16 @@ const TOOLS = [
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/esign",
-    hint: "Type your name to pick a generated signature style, or draw / upload one. Then choose pages and position.",
+    hint: "Create a signature, then place it on each page preview (positions can differ per page). Run when ready.",
     reorder: "pages",
     signaturePad: true,
     fields: [
       {
         name: "pages",
-        label: "Pages",
+        label: "Pages to sign",
         type: "text",
         value: "all",
         placeholder: "all or 1,3,5-7",
-      },
-      {
-        name: "position",
-        label: "Position",
-        type: "select",
-        options: [
-          { value: "bottom-right", label: "Bottom right" },
-          { value: "bottom-left", label: "Bottom left" },
-          { value: "bottom-center", label: "Bottom center" },
-          { value: "center", label: "Center" },
-        ],
       },
       { name: "signer_name", label: "Signer name (optional)", type: "text", value: "", placeholder: "Jane Doe" },
       { name: "sig_width", label: "Signature width (pt)", type: "text", value: "160" },
@@ -270,6 +260,20 @@ let sigMode = "type";
 let sigTypedSelected = null;
 /** @type {HTMLElement | null} */
 let sigPadRoot = null;
+/** @type {HTMLElement | null} */
+let esignPreviewRoot = null;
+let esignPreviewPage = 0;
+let esignPageCount = 0;
+let esignPageWidthPt = 612;
+let esignDragging = false;
+let esignResizing = false;
+let esignDragOffsetX = 0;
+let esignDragOffsetY = 0;
+/** @type {{ x: number, y: number, w?: number } | null} */
+let esignPos = null; // current page top-left fraction 0–1
+/** @type {Record<number, { x: number, y: number, w: number }>} */
+let esignPagePositions = {};
+let esignPreviewToken = 0;
 
 const SIG_TYPE_STYLES = [
   { id: "dancing", label: "Script", font: '"Dancing Script", cursive', size: 64, color: "#111111" },
@@ -560,6 +564,7 @@ function renderTypedSignatures(name) {
       // Mirror into optional printed name under the stamp
       const signerInput = options.querySelector('input[name="signer_name"]');
       if (signerInput && !signerInput.value.trim()) signerInput.value = text;
+      refreshEsignPreview();
     });
 
     grid.appendChild(btn);
@@ -568,6 +573,7 @@ function renderTypedSignatures(name) {
       sigTypedSelected = canvas;
     }
   });
+  refreshEsignPreview();
 }
 
 async function ensureSigFonts() {
@@ -619,9 +625,10 @@ function setupSignaturePad(root) {
       ctx.lineTo(p.x, p.y);
       ctx.stroke();
     };
-    const end = () => {
-      sigDrawing = false;
-    };
+  const end = () => {
+    sigDrawing = false;
+    refreshEsignPreview();
+  };
 
     sigCanvas.addEventListener("mousedown", start);
     sigCanvas.addEventListener("mousemove", move);
@@ -650,6 +657,7 @@ function setupSignaturePad(root) {
         preview.hidden = false;
         preview.src = URL.createObjectURL(file);
       }
+      refreshEsignPreview();
     });
   }
 
@@ -724,6 +732,326 @@ function signatureBlob() {
       else resolve(new File([blob], "signature.png", { type: "image/png" }));
     }, "image/png");
   });
+}
+
+function getEsignSigUrl() {
+  if (sigMode === "upload" && sigUploadFile) return URL.createObjectURL(sigUploadFile);
+  if (sigMode === "type" && sigTypedSelected) return sigTypedSelected.toDataURL("image/png");
+  if (sigMode === "draw" && sigCanvas && canvasHasInk(sigCanvas)) return sigCanvas.toDataURL("image/png");
+  return null;
+}
+
+function currentEsignWidth() {
+  const widthInput = options.querySelector('input[name="sig_width"]');
+  return Math.max(40, Math.min(400, Number(widthInput?.value) || 160));
+}
+
+function saveCurrentEsignPos() {
+  if (!esignPos) return;
+  esignPagePositions[esignPreviewPage] = {
+    x: esignPos.x,
+    y: esignPos.y,
+    w: currentEsignWidth(),
+  };
+}
+
+function loadEsignPosForPage(pageIndex) {
+  const saved = esignPagePositions[pageIndex];
+  if (saved) {
+    esignPos = { x: saved.x, y: saved.y, w: saved.w };
+    const widthInput = options.querySelector('input[name="sig_width"]');
+    if (widthInput && saved.w) widthInput.value = String(saved.w);
+  } else {
+    // Start from previous page placement if available, else default
+    const prev = esignPagePositions[pageIndex - 1] || esignPagePositions[0];
+    esignPos = prev
+      ? { x: prev.x, y: prev.y, w: prev.w }
+      : { x: 0.62, y: 0.78, w: currentEsignWidth() };
+  }
+}
+
+function fillMissingEsignPositions(totalPages) {
+  saveCurrentEsignPos();
+  const pagesInput = options.querySelector('input[name="pages"]');
+  const spec = (pagesInput?.value || "all").trim().toLowerCase();
+  const targets = new Set();
+  if (spec === "all" || spec === "*") {
+    for (let i = 0; i < totalPages; i++) targets.add(i);
+  } else {
+    spec.split(",").forEach((part) => {
+      part = part.trim();
+      if (!part) return;
+      if (part.includes("-")) {
+        const [a, b] = part.split("-", 2).map((n) => parseInt(n, 10));
+        for (let i = a; i <= b; i++) {
+          if (i >= 1 && i <= totalPages) targets.add(i - 1);
+        }
+      } else {
+        const i = parseInt(part, 10);
+        if (i >= 1 && i <= totalPages) targets.add(i - 1);
+      }
+    });
+  }
+  const fallback =
+    esignPagePositions[esignPreviewPage] ||
+    esignPagePositions[0] ||
+    { x: 0.62, y: 0.78, w: currentEsignWidth() };
+  targets.forEach((idx) => {
+    if (!esignPagePositions[idx]) {
+      esignPagePositions[idx] = { ...fallback };
+    }
+  });
+  syncEsignHiddenFields();
+}
+
+function syncEsignHiddenFields() {
+  if (!esignPreviewRoot) return;
+  saveCurrentEsignPos();
+  const xInput = esignPreviewRoot.querySelector("[data-esign-x]");
+  const yInput = esignPreviewRoot.querySelector("[data-esign-y]");
+  const mapInput = esignPreviewRoot.querySelector("[data-esign-positions]");
+  if (esignPos) {
+    if (xInput) xInput.value = String(esignPos.x.toFixed(4));
+    if (yInput) yInput.value = String(esignPos.y.toFixed(4));
+  }
+  if (mapInput) {
+    const payload = {};
+    Object.keys(esignPagePositions).forEach((key) => {
+      const p = esignPagePositions[key];
+      payload[key] = {
+        x: Number(p.x.toFixed(4)),
+        y: Number(p.y.toFixed(4)),
+        w: Number(p.w) || currentEsignWidth(),
+      };
+    });
+    mapInput.value = JSON.stringify(payload);
+  }
+  const status = esignPreviewRoot.querySelector("[data-esign-placed]");
+  if (status) {
+    const n = Object.keys(esignPagePositions).length;
+    status.textContent =
+      n <= 1
+        ? "Placement saved for this page. Switch pages to set a different spot on each."
+        : `Custom placements saved for ${n} pages.`;
+  }
+}
+
+function applyEsignOverlayBox() {
+  const stage = esignPreviewRoot?.querySelector("[data-esign-stage]");
+  const overlay = esignPreviewRoot?.querySelector("[data-esign-sig]");
+  const canvas = esignPreviewRoot?.querySelector("[data-esign-canvas]");
+  if (!stage || !overlay || !canvas || !esignPos) return;
+
+  const widthInput = options.querySelector('input[name="sig_width"]');
+  const widthPt = Math.max(40, Math.min(400, Number(widthInput?.value) || 160));
+  const scale = canvas.clientWidth / Math.max(1, canvas.width);
+  // Estimate PDF page width in pt from rendered canvas aspect; use tracked page width
+  const pxPerPt = canvas.width / Math.max(1, esignPageWidthPt);
+  const sigW = widthPt * pxPerPt * scale;
+  const img = overlay.querySelector("[data-esign-sig-img]");
+  const aspect = img && img.naturalWidth ? img.naturalHeight / img.naturalWidth : 0.35;
+  const sigH = sigW * aspect;
+
+  const maxX = Math.max(0, stage.clientWidth - sigW);
+  const maxY = Math.max(0, stage.clientHeight - sigH);
+  const left = Math.min(maxX, Math.max(0, esignPos.x * stage.clientWidth));
+  const top = Math.min(maxY, Math.max(0, esignPos.y * stage.clientHeight));
+  esignPos.x = stage.clientWidth ? left / stage.clientWidth : esignPos.x;
+  esignPos.y = stage.clientHeight ? top / stage.clientHeight : esignPos.y;
+
+  overlay.style.width = `${sigW}px`;
+  overlay.style.height = `${sigH}px`;
+  overlay.style.left = `${left}px`;
+  overlay.style.top = `${top}px`;
+  overlay.hidden = false;
+  syncEsignHiddenFields();
+}
+
+function snapEsignPosition(preset) {
+  if (!esignPreviewRoot) return;
+  const stage = esignPreviewRoot.querySelector("[data-esign-stage]");
+  const overlay = esignPreviewRoot.querySelector("[data-esign-sig]");
+  if (!stage || !overlay || overlay.hidden) return;
+  const margin = 0.04;
+  const w = overlay.offsetWidth / Math.max(1, stage.clientWidth);
+  const h = overlay.offsetHeight / Math.max(1, stage.clientHeight);
+  if (preset === "bottom-left") esignPos = { x: margin, y: 1 - h - margin };
+  else if (preset === "bottom-center") esignPos = { x: (1 - w) / 2, y: 1 - h - margin };
+  else if (preset === "center") esignPos = { x: (1 - w) / 2, y: (1 - h) / 2 };
+  else esignPos = { x: 1 - w - margin, y: 1 - h - margin };
+  applyEsignOverlayBox();
+  saveCurrentEsignPos();
+  syncEsignHiddenFields();
+}
+
+async function refreshEsignPreview() {
+  if (!esignPreviewRoot || active?.id !== "esign") return;
+  const canvas = esignPreviewRoot.querySelector("[data-esign-canvas]");
+  const overlay = esignPreviewRoot.querySelector("[data-esign-sig]");
+  const img = esignPreviewRoot.querySelector("[data-esign-sig-img]");
+  const label = esignPreviewRoot.querySelector("[data-esign-page-label]");
+  const empty = esignPreviewRoot.querySelector("[data-esign-empty]");
+  if (!canvas || !overlay || !img) return;
+
+  const token = ++esignPreviewToken;
+  const sigUrl = getEsignSigUrl();
+  if (!sourcePdfBytes || !sigUrl) {
+    esignPreviewRoot.hidden = true;
+    return;
+  }
+
+  esignPreviewRoot.hidden = false;
+  if (empty) empty.hidden = true;
+
+  try {
+    ensurePdfJs();
+    const pdf = await pdfjsLib.getDocument({ data: sourcePdfBytes.slice(0) }).promise;
+    if (token !== esignPreviewToken) return;
+    esignPageCount = pdf.numPages;
+    esignPreviewPage = Math.max(0, Math.min(esignPreviewPage, esignPageCount - 1));
+    if (label) label.textContent = `Page ${esignPreviewPage + 1} / ${esignPageCount}`;
+
+    const page = await pdf.getPage(esignPreviewPage + 1);
+    if (token !== esignPreviewToken) return;
+    const base = page.getViewport({ scale: 1 });
+    esignPageWidthPt = base.width;
+    const targetW = Math.min(720, esignPreviewRoot.clientWidth || 720);
+    const scale = targetW / base.width;
+    const viewport = page.getViewport({ scale });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+    if (token !== esignPreviewToken) return;
+
+    img.onload = () => {
+      loadEsignPosForPage(esignPreviewPage);
+      applyEsignOverlayBox();
+      saveCurrentEsignPos();
+      syncEsignHiddenFields();
+    };
+    if (img.src && img.src.startsWith("blob:")) URL.revokeObjectURL(img.src);
+    img.src = sigUrl;
+    if (img.complete && img.naturalWidth) {
+      loadEsignPosForPage(esignPreviewPage);
+      applyEsignOverlayBox();
+      saveCurrentEsignPos();
+      syncEsignHiddenFields();
+    }
+  } catch (err) {
+    console.warn("E-sign preview failed", err);
+    if (empty) {
+      empty.hidden = false;
+      empty.textContent = "Could not render preview. You can still Run to sign.";
+    }
+  }
+}
+
+function setupEsignPreview(root) {
+  esignPreviewRoot = root;
+  esignPagePositions = {};
+  esignPos = { x: 0.62, y: 0.78, w: 160 };
+  esignPreviewPage = 0;
+
+  const overlay = root.querySelector("[data-esign-sig]");
+  const resizeHandle = root.querySelector("[data-esign-resize]");
+  const stage = root.querySelector("[data-esign-stage]");
+
+  root.querySelectorAll("[data-esign-snap]").forEach((btn) => {
+    btn.addEventListener("click", () => snapEsignPosition(btn.getAttribute("data-esign-snap")));
+  });
+  root.querySelector("[data-esign-prev]")?.addEventListener("click", () => {
+    if (esignPreviewPage > 0) {
+      saveCurrentEsignPos();
+      esignPreviewPage -= 1;
+      loadEsignPosForPage(esignPreviewPage);
+      refreshEsignPreview();
+    }
+  });
+  root.querySelector("[data-esign-next]")?.addEventListener("click", () => {
+    if (esignPreviewPage < esignPageCount - 1) {
+      saveCurrentEsignPos();
+      esignPreviewPage += 1;
+      loadEsignPosForPage(esignPreviewPage);
+      refreshEsignPreview();
+    }
+  });
+
+  const onMove = (e) => {
+    if (!esignDragging && !esignResizing) return;
+    e.preventDefault();
+    const pt = e.touches ? e.touches[0] : e;
+    const rect = stage.getBoundingClientRect();
+    if (esignResizing) {
+      const widthInput = options.querySelector('input[name="sig_width"]');
+      const left = overlay.offsetLeft;
+      const newW = Math.max(40, Math.min(rect.width - left, pt.clientX - rect.left - left));
+      const pxPerPt = (esignPreviewRoot.querySelector("[data-esign-canvas]")?.width || 1) / Math.max(1, esignPageWidthPt);
+      const scale = (esignPreviewRoot.querySelector("[data-esign-canvas]")?.clientWidth || 1) / Math.max(1, esignPreviewRoot.querySelector("[data-esign-canvas]")?.width || 1);
+      const widthPt = Math.round(newW / (pxPerPt * scale));
+      if (widthInput) widthInput.value = String(Math.max(40, Math.min(400, widthPt)));
+      applyEsignOverlayBox();
+      return;
+    }
+    if (esignDragging) {
+      const left = pt.clientX - rect.left - esignDragOffsetX;
+      const top = pt.clientY - rect.top - esignDragOffsetY;
+      esignPos = {
+        x: left / Math.max(1, rect.width),
+        y: top / Math.max(1, rect.height),
+      };
+      applyEsignOverlayBox();
+    }
+  };
+  const onEnd = () => {
+    if (esignDragging || esignResizing) {
+      saveCurrentEsignPos();
+      syncEsignHiddenFields();
+    }
+    esignDragging = false;
+    esignResizing = false;
+  };
+
+  overlay?.addEventListener("mousedown", (e) => {
+    if (e.target === resizeHandle) return;
+    esignDragging = true;
+    const rect = overlay.getBoundingClientRect();
+    esignDragOffsetX = e.clientX - rect.left;
+    esignDragOffsetY = e.clientY - rect.top;
+    e.preventDefault();
+  });
+  overlay?.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.target === resizeHandle) return;
+      const t = e.touches[0];
+      esignDragging = true;
+      const rect = overlay.getBoundingClientRect();
+      esignDragOffsetX = t.clientX - rect.left;
+      esignDragOffsetY = t.clientY - rect.top;
+    },
+    { passive: true }
+  );
+  resizeHandle?.addEventListener("mousedown", (e) => {
+    esignResizing = true;
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  resizeHandle?.addEventListener(
+    "touchstart",
+    (e) => {
+      esignResizing = true;
+      e.stopPropagation();
+    },
+    { passive: true }
+  );
+
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onEnd);
+  window.addEventListener("touchmove", onMove, { passive: false });
+  window.addEventListener("touchend", onEnd);
+
+  options.querySelector('input[name="sig_width"]')?.addEventListener("change", () => applyEsignOverlayBox());
+  options.querySelector('input[name="sig_width"]')?.addEventListener("input", () => applyEsignOverlayBox());
 }
 
 function ensurePdfJs() {
@@ -1012,7 +1340,6 @@ function openTool(tool) {
         o.value = opt.value;
         o.textContent = opt.label;
         if (field.name === "level" && opt.value === "medium") o.selected = true;
-        if (field.name === "position" && opt.value === "bottom-right") o.selected = true;
         if (field.name === "language" && opt.value === "eng") o.selected = true;
         input.appendChild(o);
       });
@@ -1026,6 +1353,43 @@ function openTool(tool) {
     label.appendChild(input);
     options.appendChild(label);
   });
+
+  if (tool.signaturePad) {
+    const preview = document.createElement("div");
+    preview.className = "esign-preview";
+    preview.hidden = true;
+    preview.innerHTML = `
+      <strong>Placement preview</strong>
+      <p class="hint">Drag the signature on each page — locations can differ page to page. Use Prev/Next or the page thumbnails.</p>
+      <div class="esign-preview-toolbar">
+        <button type="button" class="editor-btn" data-esign-snap="bottom-right">Bottom right</button>
+        <button type="button" class="editor-btn" data-esign-snap="bottom-left">Bottom left</button>
+        <button type="button" class="editor-btn" data-esign-snap="bottom-center">Bottom center</button>
+        <button type="button" class="editor-btn" data-esign-snap="center">Center</button>
+        <span class="editor-sep" aria-hidden="true"></span>
+        <button type="button" class="editor-btn" data-esign-prev>Prev page</button>
+        <span class="esign-page-label" data-esign-page-label>Page 1</span>
+        <button type="button" class="editor-btn" data-esign-next>Next page</button>
+      </div>
+      <p class="hint" data-esign-placed>Placement saved for this page. Switch pages to set a different spot on each.</p>
+      <p class="hint" data-esign-empty hidden>Upload a PDF and create a signature to preview placement.</p>
+      <div class="esign-stage" data-esign-stage>
+        <canvas data-esign-canvas></canvas>
+        <div class="esign-sig" data-esign-sig hidden>
+          <img data-esign-sig-img alt="Signature" draggable="false" />
+          <span class="esign-resize" data-esign-resize title="Resize"></span>
+        </div>
+      </div>
+      <input type="hidden" name="position" value="custom" />
+      <input type="hidden" name="x_pct" data-esign-x value="0.62" />
+      <input type="hidden" name="y_pct" data-esign-y value="0.78" />
+      <input type="hidden" name="positions_json" data-esign-positions value="{}" />
+    `;
+    options.appendChild(preview);
+    setupEsignPreview(preview);
+    options.querySelector('input[name="sig_width"]')?.addEventListener("input", () => applyEsignOverlayBox());
+    options.querySelector('input[name="sig_width"]')?.addEventListener("change", () => applyEsignOverlayBox());
+  }
 
   requestAnimationFrame(() => requestAnimationFrame(scrollToUpload));
 }
@@ -1119,6 +1483,7 @@ async function ingestFiles(files, { append }) {
     if (active.id === "compress") {
       updateCompressSizeInfo(queueOriginalBytes(), null);
     }
+    if (active.id === "esign") refreshEsignPreview();
     requestAnimationFrame(scrollToUpload);
   } catch (err) {
     setStatus(err.message || String(err), true);
@@ -1253,6 +1618,12 @@ async function selectQueueItem(id) {
   if (!item) {
     clearSortStage();
     return;
+  }
+  if (active?.id === "esign" && item.kind === "page" && typeof item.pageIndex === "number") {
+    saveCurrentEsignPos();
+    esignPreviewPage = item.pageIndex;
+    loadEsignPosForPage(esignPreviewPage);
+    refreshEsignPreview();
   }
   await renderSortPreview(item);
 }
@@ -1439,7 +1810,14 @@ form.addEventListener("submit", async (e) => {
     }
 
     const fd = new FormData();
-    if (active.reorder === "pages") {
+    if (active.id === "ocr") {
+      // Send both field names for API compatibility (file + files)
+      queue.forEach((item, i) => {
+        if (!item.file) return;
+        fd.append("files", item.file);
+        if (i === 0) fd.append("file", item.file);
+      });
+    } else if (active.reorder === "pages") {
       const ordered = await buildOrderedPdfFile();
       fd.append("file", ordered);
     } else if (active.multiple || active.reorder === "files") {
@@ -1455,6 +1833,7 @@ form.addEventListener("submit", async (e) => {
     });
 
     if (active.signaturePad) {
+      fillMissingEsignPositions(esignPageCount || queue.length || 1);
       const sig = await signatureBlob();
       fd.append("signature", sig, sig.name || "signature.png");
     }
