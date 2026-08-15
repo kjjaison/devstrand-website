@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Allura&family=Caveat:wght@600&family=Dancing+Script:wght@600;700&family=Great+Vibes&family=Homemade+Apple&family=Pacifico&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sacramento&family=Satisfy&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/styles.css?v=21" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=24" />
   <link rel="icon" href="https://devstrand.com/assets/logo-icon.png" type="image/png" />
   <script type="application/ld+json">
   {
@@ -167,6 +167,9 @@
             <button type="button" class="editor-btn danger" data-editor-delete>Delete selected</button>
             <button type="button" class="editor-btn" data-editor-clear-page>Clear overlays</button>
             <span class="editor-sep" aria-hidden="true"></span>
+            <button type="button" class="editor-btn" data-editor-undo title="Undo (Ctrl+Z)">Undo</button>
+            <button type="button" class="editor-btn" data-editor-redo title="Redo (Ctrl+Y)">Redo</button>
+            <span class="editor-sep" aria-hidden="true"></span>
             <button type="button" class="editor-btn" data-editor-add-page>+ Blank page</button>
             <button type="button" class="editor-btn" data-editor-duplicate-page>Duplicate page</button>
             <button type="button" class="editor-btn danger" data-editor-remove-page>Remove page</button>
@@ -184,9 +187,52 @@
             <label class="editor-field">Color
               <input type="color" data-editor-color value="#111111" />
             </label>
-            <input type="file" data-editor-image accept="image/png,image/jpeg,image/jpg" hidden />
+            <label class="editor-field" data-editor-image-size-wrap hidden>Image W
+              <input type="number" data-editor-image-width value="160" min="16" max="2000" step="1" title="Image width in pixels" />
+            </label>
+            <input type="file" data-editor-image accept="image/png,image/jpeg,image/jpg,image/webp" hidden />
           </div>
-          <p class="hint" data-editor-status>Upload a PDF, then double-click existing or added text to edit it.</p>
+          <div class="editor-stamps" data-editor-stamps hidden>
+            <span class="editor-stamps-label">Stamps</span>
+            <button type="button" class="editor-stamp" data-editor-stamp="tick" title="Tick / checkmark" aria-label="Tick stamp">✓</button>
+            <button type="button" class="editor-stamp" data-editor-stamp="cross" title="Cross / X" aria-label="Cross stamp">✗</button>
+            <button type="button" class="editor-stamp" data-editor-stamp="circle" title="Circle" aria-label="Circle stamp">○</button>
+            <button type="button" class="editor-stamp" data-editor-stamp="star" title="Star" aria-label="Star stamp">★</button>
+            <span class="editor-sep" aria-hidden="true"></span>
+            <span class="editor-stamps-label">Color</span>
+            <button type="button" class="editor-stamp-color active" data-editor-stamp-color="#111111" title="Black" aria-label="Black" style="background-color:#111111"></button>
+            <button type="button" class="editor-stamp-color" data-editor-stamp-color="#d32f2f" title="Red" aria-label="Red" style="background-color:#d32f2f"></button>
+            <button type="button" class="editor-stamp-color" data-editor-stamp-color="#1a9f4b" title="Green" aria-label="Green" style="background-color:#1a9f4b"></button>
+            <button type="button" class="editor-stamp-color" data-editor-stamp-color="#1a73e8" title="Blue" aria-label="Blue" style="background-color:#1a73e8"></button>
+            <button type="button" class="editor-stamp-color" data-editor-stamp-color="#c79100" title="Amber" aria-label="Amber" style="background-color:#c79100"></button>
+            <button type="button" class="editor-stamp-color" data-editor-stamp-color="#6a1b9a" title="Purple" aria-label="Purple" style="background-color:#6a1b9a"></button>
+            <label class="editor-stamp-custom-color" title="Custom stamp color">
+              <span class="sr-only">Custom color</span>
+              <input type="color" data-editor-stamp-custom-color value="#111111" />
+            </label>
+            <button type="button" class="editor-btn" data-editor-upload-image>Upload image</button>
+            <button type="button" class="editor-btn" data-editor-crop-image title="Crop the selected image on the page">Crop image</button>
+          </div>
+          <p class="hint" data-editor-status>Upload a PDF, then double-click existing or added text to edit it. Ctrl+Z undoes.</p>
+          <div class="editor-crop-modal" data-editor-crop-modal hidden>
+            <div class="editor-crop-dialog" role="dialog" aria-label="Crop image">
+              <h3>Crop image</h3>
+              <p class="hint">Drag the box to move it, or drag its edges to resize. Then apply.</p>
+              <div class="editor-crop-stage" data-editor-crop-stage>
+                <img data-editor-crop-img alt="Crop preview" draggable="false" />
+                <div class="editor-crop-box" data-editor-crop-box>
+                  <span class="editor-crop-handle nw" data-crop-handle="nw"></span>
+                  <span class="editor-crop-handle ne" data-crop-handle="ne"></span>
+                  <span class="editor-crop-handle sw" data-crop-handle="sw"></span>
+                  <span class="editor-crop-handle se" data-crop-handle="se"></span>
+                </div>
+              </div>
+              <div class="editor-crop-actions">
+                <button type="button" class="editor-btn" data-editor-crop-cancel>Cancel</button>
+                <button type="button" class="editor-btn active" data-editor-crop-apply>Apply crop</button>
+              </div>
+            </div>
+          </div>
           <div class="editor-body">
             <div class="editor-thumbs" data-editor-thumbs></div>
             <div class="editor-stage-wrap" data-editor-stage-wrap>
@@ -245,7 +291,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
   <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js" defer></script>
-  <script src="/static/js/editor.js?v=8" defer></script>
-  <script src="/static/js/app.js?v=23" defer></script>
+  <script src="/static/js/editor.js?v=12" defer></script>
+  <script src="/static/js/app.js?v=24" defer></script>
 </body>
 </html>

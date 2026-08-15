@@ -34,6 +34,70 @@
     return `#${h(r)}${h(g)}${h(b)}`;
   }
 
+  function loadHtmlImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Could not load image."));
+      img.src = src;
+    });
+  }
+
+  function stampSvgMarkup(id, color = "#111111") {
+    const ink = normalizeHex(color);
+    if (id === "tick") {
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+        <circle cx="128" cy="128" r="118" fill="#ffffff" stroke="${ink}" stroke-width="14"/>
+        <path d="M72 130 L112 170 L188 86" fill="none" stroke="${ink}" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+    }
+    if (id === "cross") {
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+        <circle cx="128" cy="128" r="118" fill="#ffffff" stroke="${ink}" stroke-width="14"/>
+        <path d="M88 88 L168 168 M168 88 L88 168" fill="none" stroke="${ink}" stroke-width="22" stroke-linecap="round"/>
+      </svg>`;
+    }
+    if (id === "circle") {
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+        <circle cx="128" cy="128" r="96" fill="none" stroke="${ink}" stroke-width="28"/>
+      </svg>`;
+    }
+    if (id === "star") {
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+        <polygon points="128,28 155,98 230,98 170,142 192,214 128,170 64,214 86,142 26,98 101,98" fill="${ink}" stroke="${ink}" stroke-width="8" stroke-linejoin="round"/>
+      </svg>`;
+    }
+    return "";
+  }
+
+  async function rasterizeSvgToPng(svgText, name) {
+    const svgUrl = URL.createObjectURL(new Blob([svgText], { type: "image/svg+xml" }));
+    try {
+      const img = await loadHtmlImage(svgUrl);
+      const canvas = document.createElement("canvas");
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, 256, 256);
+      ctx.drawImage(img, 0, 0, 256, 256);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("Could not create stamp image.");
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const url = URL.createObjectURL(blob);
+      return { bytes, url, name, type: "image/png", naturalW: 256, naturalH: 256 };
+    } finally {
+      URL.revokeObjectURL(svgUrl);
+    }
+  }
+
+  async function canvasToPngPayload(canvas, name) {
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) throw new Error("Could not encode cropped image.");
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const url = URL.createObjectURL(blob);
+    return { bytes, url, name, type: "image/png", naturalW: canvas.width, naturalH: canvas.height };
+  }
+
   /** Built-in pdf-lib fonts + local TTF files under /static/fonts. */
   const FONT_CATALOG = [
     { id: "Helvetica", label: "Helvetica", group: "Standard", standard: "Helvetica", family: "Helvetica, Arial, sans-serif", weight: "400", style: "normal", match: [/helvetica/] },
@@ -207,6 +271,10 @@
       this.redoStack = [];
       this._historyLocked = false;
       this._dragHistoryPushed = false;
+      this._styleHistoryPushed = false;
+      this.cropSession = null;
+      this.stampColor = "#111111";
+      this.selectedStampId = null;
 
       this.thumbsEl = root.querySelector("[data-editor-thumbs]");
       this.stageEl = root.querySelector("[data-editor-stage]");
@@ -218,12 +286,81 @@
       this.fontFamilyInput = root.querySelector("[data-editor-font-family]");
       this.colorInput = root.querySelector("[data-editor-color]");
       this.imageInput = root.querySelector("[data-editor-image]");
+      this.imageWidthInput = root.querySelector("[data-editor-image-width]");
+      this.imageSizeWrap = root.querySelector("[data-editor-image-size-wrap]");
+      this.stampsEl = root.querySelector("[data-editor-stamps]");
+      this.stampCustomColor = root.querySelector("[data-editor-stamp-custom-color]");
       this.zoomLabel = root.querySelector("[data-editor-zoom-label]");
+      this.cropModal = root.querySelector("[data-editor-crop-modal]");
+      this.cropStage = root.querySelector("[data-editor-crop-stage]");
+      this.cropImg = root.querySelector("[data-editor-crop-img]");
+      this.cropBox = root.querySelector("[data-editor-crop-box]");
 
       ensureEditorFontFaces();
       this._populateFontSelect();
+      this._applyStampColorToUi();
       this._bindToolbar();
       this._bindStage();
+      this._bindCropUi();
+    }
+
+    _setStampsPanelVisible(show) {
+      if (!this.stampsEl) return;
+      this.stampsEl.hidden = !show;
+      this.stampsEl.classList.toggle("is-open", !!show);
+      if (!show) {
+        this.selectedStampId = null;
+        this.root.querySelectorAll("[data-editor-stamp]").forEach((b) => b.classList.remove("active"));
+      }
+    }
+
+    _leaveImagePicker() {
+      if (this.mode === "image") {
+        this.mode = "select";
+        this.root.querySelectorAll("[data-editor-mode]").forEach((b) => {
+          b.classList.toggle("active", b.getAttribute("data-editor-mode") === "select");
+        });
+      }
+      this.pendingImage = null;
+      this._setStampsPanelVisible(false);
+    }
+
+    _applyStampColorToUi() {
+      const color = normalizeHex(this.stampColor || "#111111");
+      this.root.style.setProperty("--stamp-ink", color);
+      this.root.querySelectorAll("[data-editor-stamp]").forEach((btn) => {
+        btn.style.setProperty("--stamp-ink", color);
+        btn.style.color = color;
+      });
+      if (this.stampCustomColor) this.stampCustomColor.value = color;
+      this.root.querySelectorAll("[data-editor-stamp-color]").forEach((btn) => {
+        const swatch = normalizeHex(btn.getAttribute("data-editor-stamp-color"));
+        btn.classList.toggle("active", swatch === color);
+      });
+    }
+
+    async _setStampColor(color, { refreshPending = true } = {}) {
+      this.stampColor = normalizeHex(color);
+      this._applyStampColorToUi();
+      if (refreshPending && this.selectedStampId && this.mode === "image") {
+        await this._prepareStamp(this.selectedStampId);
+      }
+    }
+
+    async _prepareStamp(stampId) {
+      const svg = stampSvgMarkup(stampId, this.stampColor);
+      if (!svg) return;
+      this.pendingImage = await rasterizeSvgToPng(svg, `stamp-${stampId}.png`);
+      this.selectedStampId = stampId;
+      this.mode = "image";
+      this._setStampsPanelVisible(true);
+      this.root.querySelectorAll("[data-editor-mode]").forEach((b) => {
+        b.classList.toggle("active", b.getAttribute("data-editor-mode") === "image");
+      });
+      this.root.querySelectorAll("[data-editor-stamp]").forEach((b) => {
+        b.classList.toggle("active", b.getAttribute("data-editor-stamp") === stampId);
+      });
+      this._setStatus(`Stamp ready (${stampId}). Click the page to place it. Drag corners to resize.`);
     }
 
     _populateFontSelect() {
@@ -311,7 +448,13 @@
           this.pageIndex = snap.pageIndex || 0;
           await this.renderPage(this.pageIndex, { keepSelection: true });
         }
-        if (this.selectedId) this._syncToolbarFromItem(this._findItem(this.selectedId));
+        if (this.selectedId) {
+          const selected = this._findItem(this.selectedId);
+          this._syncToolbarFromItem(selected);
+          this._syncImageSizeToolbar(selected);
+        } else {
+          this._syncImageSizeToolbar(null);
+        }
         this._updateZoomLabel();
       } finally {
         this._historyLocked = false;
@@ -319,12 +462,11 @@
     }
 
     async undo() {
-      if (this.editingId) return;
+      if (this.editingId) this._commitInlineEdit();
       if (!this.undoStack.length) {
         this._setStatus("Nothing to undo.", true);
         return;
       }
-      this._commitInlineEdit();
       this.redoStack.push(this._snapshotState());
       const prev = this.undoStack.pop();
       await this._restoreState(prev);
@@ -332,12 +474,11 @@
     }
 
     async redo() {
-      if (this.editingId) return;
+      if (this.editingId) this._commitInlineEdit();
       if (!this.redoStack.length) {
         this._setStatus("Nothing to redo.", true);
         return;
       }
-      this._commitInlineEdit();
       this.undoStack.push(this._snapshotState());
       const next = this.redoStack.pop();
       await this._restoreState(next);
@@ -352,15 +493,24 @@
           this.root.querySelectorAll("[data-editor-mode]").forEach((b) => {
             b.classList.toggle("active", b === btn);
           });
+          const imageMode = this.mode === "image";
+          this._setStampsPanelVisible(imageMode);
+          if (!imageMode) this.pendingImage = null;
           this._setStatus(
             this.mode === "text"
               ? "Click the page to place text. Double-click any text to edit it."
-              : this.mode === "image"
-                ? "Choose an image, then click the page to place it."
-                : "Select text to inspect font/color. Double-click to edit."
+              : imageMode
+                ? "Pick a stamp or Upload image, then click the page to place it."
+                : "Select text to inspect font/color. Double-click to edit. Ctrl+Z undoes."
           );
-          if (this.mode === "image") this.imageInput.click();
         });
+      });
+
+      // Any other toolbar control (not Add image) closes the stamp panel.
+      this.root.querySelector(".editor-toolbar")?.addEventListener("click", (e) => {
+        if (e.target.closest('[data-editor-mode="image"]')) return;
+        if (e.target.closest("[data-editor-mode]")) return; // text/select already hide above
+        if (this.stampsEl && !this.stampsEl.hidden) this._leaveImagePicker();
       });
 
       this.root.querySelector("[data-editor-delete]")?.addEventListener("click", () => this.deleteSelected());
@@ -372,31 +522,101 @@
       this.root.querySelector("[data-editor-duplicate-page]")?.addEventListener("click", () => this.duplicateCurrentPage());
       this.root.querySelector("[data-editor-remove-page]")?.addEventListener("click", () => this.removeCurrentPage());
       this.root.querySelector("[data-editor-edit-text]")?.addEventListener("click", () => this.editSelectedText());
+      this.root.querySelector("[data-editor-undo]")?.addEventListener("click", () => this.undo());
+      this.root.querySelector("[data-editor-redo]")?.addEventListener("click", () => this.redo());
+      this.root.querySelector("[data-editor-crop-image]")?.addEventListener("click", () => this.openCropSelected());
+      this.root.querySelector("[data-editor-upload-image]")?.addEventListener("click", () => {
+        this.mode = "image";
+        this.selectedStampId = null;
+        this._setStampsPanelVisible(true);
+        this.root.querySelectorAll("[data-editor-mode]").forEach((b) => {
+          b.classList.toggle("active", b.getAttribute("data-editor-mode") === "image");
+        });
+        this.root.querySelectorAll("[data-editor-stamp]").forEach((b) => b.classList.remove("active"));
+        this.imageInput?.click();
+      });
+
+      this.root.querySelectorAll("[data-editor-stamp-color]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          this._setStampColor(btn.getAttribute("data-editor-stamp-color"));
+        });
+      });
+      this.stampCustomColor?.addEventListener("input", () => {
+        this._setStampColor(this.stampCustomColor.value);
+      });
+      this.stampCustomColor?.addEventListener("change", () => {
+        this._setStampColor(this.stampCustomColor.value);
+      });
+
+      this.root.querySelectorAll("[data-editor-stamp]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const stampId = btn.getAttribute("data-editor-stamp");
+          try {
+            await this._prepareStamp(stampId);
+          } catch (err) {
+            this._setStatus(err.message || String(err), true);
+          }
+        });
+      });
 
       const onStyleChange = () => this._applyToolbarStyleToSelected();
       this.fontSizeInput?.addEventListener("input", onStyleChange);
-      this.fontSizeInput?.addEventListener("change", onStyleChange);
-      this.fontFamilyInput?.addEventListener("change", onStyleChange);
+      this.fontSizeInput?.addEventListener("change", () => {
+        this._styleHistoryPushed = false;
+        onStyleChange();
+      });
+      this.fontFamilyInput?.addEventListener("change", () => {
+        this._styleHistoryPushed = false;
+        onStyleChange();
+      });
       this.colorInput?.addEventListener("input", onStyleChange);
-      this.colorInput?.addEventListener("change", onStyleChange);
+      this.colorInput?.addEventListener("change", () => {
+        this._styleHistoryPushed = false;
+        onStyleChange();
+      });
+
+      this.imageWidthInput?.addEventListener("change", () => this._applyImageWidthFromToolbar());
+      this.imageWidthInput?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          this._applyImageWidthFromToolbar();
+        }
+      });
 
       this.imageInput?.addEventListener("change", async () => {
         const file = this.imageInput.files?.[0];
         if (!file) return;
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const url = URL.createObjectURL(file);
-        this.pendingImage = { bytes, url, name: file.name, type: file.type };
-        this.mode = "image";
-        this.root.querySelectorAll("[data-editor-mode]").forEach((b) => {
-          b.classList.toggle("active", b.getAttribute("data-editor-mode") === "image");
-        });
-        this._setStatus("Click the page to place the image.");
+        try {
+          const url = URL.createObjectURL(file);
+          const img = await loadHtmlImage(url);
+          URL.revokeObjectURL(url);
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
+          canvas.getContext("2d").drawImage(img, 0, 0);
+          this.pendingImage = await canvasToPngPayload(canvas, file.name.replace(/\.\w+$/, "") + ".png");
+          this.selectedStampId = null;
+          this.mode = "image";
+          this._setStampsPanelVisible(true);
+          this.root.querySelectorAll("[data-editor-mode]").forEach((b) => {
+            b.classList.toggle("active", b.getAttribute("data-editor-mode") === "image");
+          });
+          this.root.querySelectorAll("[data-editor-stamp]").forEach((b) => b.classList.remove("active"));
+          this._setStatus("Click the page to place the image. Drag corners to resize, or use Crop image.");
+        } catch (err) {
+          this._setStatus(err.message || String(err), true);
+        }
         this.imageInput.value = "";
       });
 
       document.addEventListener("keydown", (e) => {
         if (this.root.hidden) return;
-        if (this.editingId) {
+        if (this.cropSession && e.key === "Escape") {
+          e.preventDefault();
+          this.closeCropModal();
+          return;
+        }
+        if (this.editingId || e.target?.isContentEditable) {
           if (e.key === "Escape") {
             e.preventDefault();
             this._cancelInlineEdit();
@@ -405,9 +625,11 @@
           return;
         }
         const tag = (e.target && e.target.tagName) || "";
-        const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target?.isContentEditable;
+        const outsideEditor = !this.root.contains(e.target);
+        const outsideTyping =
+          outsideEditor && (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT");
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
-          if (typing) return;
+          if (outsideTyping) return;
           e.preventDefault();
           this.undo();
           return;
@@ -416,18 +638,18 @@
           (e.ctrlKey || e.metaKey) &&
           ((e.key === "y" || e.key === "Y") || (e.shiftKey && (e.key === "z" || e.key === "Z")))
         ) {
-          if (typing) return;
+          if (outsideTyping) return;
           e.preventDefault();
           this.redo();
           return;
         }
         if ((e.key === "Delete" || e.key === "Backspace") && this.selectedId) {
-          if (typing) return;
+          if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
           e.preventDefault();
           this.deleteSelected();
         }
         if ((e.key === "Enter" || e.key === "F2") && this.selectedId) {
-          if (typing) return;
+          if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
           const item = this._findItem(this.selectedId);
           if (item && (item.type === "text" || item.type === "native")) {
             e.preventDefault();
@@ -489,7 +711,10 @@
       const item = this._findItem(this.selectedId);
       if (!item || (item.type !== "text" && item.type !== "native")) return;
 
-      this._pushHistory();
+      if (!this._styleHistoryPushed) {
+        this._pushHistory();
+        this._styleHistoryPushed = true;
+      }
       const size = Number(this.fontSizeInput?.value);
       if (size > 0) item.fontSize = size;
       if (this.colorInput?.value) item.color = normalizeHex(this.colorInput.value);
@@ -523,14 +748,48 @@
       if (el) this._applyStyleToElement(el, item);
     }
 
+    _applyImageWidthFromToolbar() {
+      const item = this._findItem(this.selectedId);
+      if (!item || item.type !== "image") return;
+      const nextW = Number(this.imageWidthInput?.value);
+      if (!(nextW > 0)) return;
+      const ratio =
+        item.h && item.w
+          ? item.h / item.w
+          : item.naturalH && item.naturalW
+            ? item.naturalH / item.naturalW
+            : 0.75;
+      this._pushHistory();
+      item.w = Math.max(16, Math.min(nextW, this.canvas.width));
+      item.h = Math.max(16, item.w * ratio);
+      this._paintOverlays();
+      this._setStatus(`Image sized to ${Math.round(item.w)}×${Math.round(item.h)}px.`);
+    }
+
+    _syncImageSizeToolbar(item) {
+      const show = !!(item && item.type === "image");
+      if (this.imageSizeWrap) this.imageSizeWrap.hidden = !show;
+      if (show && this.imageWidthInput) {
+        this.imageWidthInput.value = String(Math.round(item.w || 160));
+      }
+    }
+
     _selectItem(id) {
       this.selectedId = id || null;
       const item = id ? this._findItem(id) : null;
+      this._syncImageSizeToolbar(item);
       if (item && (item.type === "text" || item.type === "native")) {
         this._syncToolbarFromItem(item);
         this._setStatus(
           `Selected: ${this._fontLabel(item.fontFamily)} · ${Math.round(item.fontSize || 12)}px · ${normalizeHex(item.color)}. Double-click to edit.`
         );
+      } else if (item && item.type === "image") {
+        this._setStampsPanelVisible(true);
+        this._setStatus(
+          `Image selected (${Math.round(item.w)}×${Math.round(item.h)}px). Drag to move, corners to resize, or Crop image.`
+        );
+      } else if (this.mode !== "image") {
+        this._setStampsPanelVisible(false);
       }
       this._paintOverlays();
     }
@@ -593,6 +852,10 @@
       this.undoStack = [];
       this.redoStack = [];
       this.pendingImage = null;
+      this.selectedStampId = null;
+      this.closeCropModal();
+      this._syncImageSizeToolbar(null);
+      this._setStampsPanelVisible(false);
       this.scale = 1.6;
       this.thumbsEl.innerHTML = "";
       this.layer.innerHTML = "";
@@ -928,6 +1191,14 @@
           img.alt = "";
           img.draggable = false;
           el.appendChild(img);
+          if (ov.id === this.selectedId) {
+            ["nw", "ne", "sw", "se"].forEach((corner) => {
+              const handle = document.createElement("span");
+              handle.className = `editor-resize-handle ${corner}`;
+              handle.dataset.resize = corner;
+              el.appendChild(handle);
+            });
+          }
         }
         this.layer.appendChild(el);
       };
@@ -967,6 +1238,8 @@
       this.selectedId = id;
       this.editingId = id;
       this.mode = "select";
+      this.selectedStampId = null;
+      this._setStampsPanelVisible(false);
       this.root.querySelectorAll("[data-editor-mode]").forEach((b) => {
         b.classList.toggle("active", b.getAttribute("data-editor-mode") === "select");
       });
@@ -1114,6 +1387,8 @@
           fontFamily,
         });
         this.mode = "select";
+        this.selectedStampId = null;
+        this._setStampsPanelVisible(false);
         this.root.querySelectorAll("[data-editor-mode]").forEach((b) => {
           b.classList.toggle("active", b.getAttribute("data-editor-mode") === "select");
         });
@@ -1124,10 +1399,13 @@
 
       if (this.mode === "image") {
         if (!this.pendingImage) {
-          this.imageInput.click();
+          this._setStatus("Pick a stamp or click Upload image first.", true);
           return;
         }
-        const maxW = Math.min(280, this.canvas.width * 0.4);
+        const maxW = Math.min(160, this.canvas.width * 0.35);
+        const natW = this.pendingImage.naturalW || 0;
+        const natH = this.pendingImage.naturalH || 0;
+        const aspect = natW && natH ? natH / natW : 1;
         this._pushHistory();
         const placed = {
           id: uid(),
@@ -1135,30 +1413,41 @@
           x,
           y,
           w: maxW,
-          h: maxW * 0.75,
+          h: maxW * aspect,
           imageUrl: this.pendingImage.url,
           imageBytes: this.pendingImage.bytes,
-          imageType: this.pendingImage.type,
+          imageType: this.pendingImage.type || "image/png",
+          naturalW: natW || maxW,
+          naturalH: natH || maxW * aspect,
         };
         this._pageOverlays().push(placed);
-        const img = new Image();
-        img.onload = () => {
-          placed.h = placed.w * (img.height / img.width);
-          this._paintOverlays();
-        };
-        img.src = this.pendingImage.url;
+        if (!natW || !natH) {
+          const img = new Image();
+          img.onload = () => {
+            placed.naturalW = img.width;
+            placed.naturalH = img.height;
+            placed.h = placed.w * (img.height / img.width);
+            this._syncImageSizeToolbar(placed);
+            this._paintOverlays();
+          };
+          img.src = this.pendingImage.url;
+        }
         this.pendingImage = null;
+        this.selectedStampId = null;
         this.mode = "select";
+        this._setStampsPanelVisible(false);
         this.root.querySelectorAll("[data-editor-mode]").forEach((b) => {
           b.classList.toggle("active", b.getAttribute("data-editor-mode") === "select");
         });
+        this.root.querySelectorAll("[data-editor-stamp]").forEach((b) => b.classList.remove("active"));
         this._selectItem(placed.id);
-        this._setStatus("Image added. Drag to move, or Delete to remove.");
+        this._setStatus("Image added. Drag corners to resize, Crop image to trim, Ctrl+Z to undo.");
       }
     }
 
     _onPointerDown(e) {
-      if (this.editingId) return;
+      if (this.editingId || this.cropSession) return;
+      const resizeHandle = e.target.closest("[data-resize]");
       const hit = e.target.closest(".editor-overlay");
       if (!hit || this.mode !== "select") return;
       e.preventDefault();
@@ -1166,13 +1455,28 @@
       const ov = this._findItem(this.selectedId);
       if (!ov) return;
       this._dragHistoryPushed = false;
-      this.drag = {
-        id: ov.id,
-        startX: e.clientX,
-        startY: e.clientY,
-        origX: ov.x,
-        origY: ov.y,
-      };
+      if (resizeHandle && ov.type === "image") {
+        this.drag = {
+          kind: "resize",
+          corner: resizeHandle.getAttribute("data-resize"),
+          id: ov.id,
+          startX: e.clientX,
+          startY: e.clientY,
+          origX: ov.x,
+          origY: ov.y,
+          origW: ov.w,
+          origH: ov.h,
+        };
+      } else {
+        this.drag = {
+          kind: "move",
+          id: ov.id,
+          startX: e.clientX,
+          startY: e.clientY,
+          origX: ov.x,
+          origY: ov.y,
+        };
+      }
       hit.setPointerCapture?.(e.pointerId);
     }
 
@@ -1186,6 +1490,61 @@
         this._pushHistory();
         this._dragHistoryPushed = true;
       }
+
+      if (this.drag.kind === "resize" && ov.type === "image") {
+        const minSize = 16;
+        const keepAspect = !e.shiftKey;
+        const aspect = this.drag.origH / Math.max(1, this.drag.origW);
+        const corner = this.drag.corner;
+        let x = this.drag.origX;
+        let y = this.drag.origY;
+        let w = this.drag.origW;
+        let h = this.drag.origH;
+
+        if (corner === "se") {
+          w = this.drag.origW + dx;
+          h = keepAspect ? w * aspect : this.drag.origH + dy;
+        } else if (corner === "sw") {
+          w = this.drag.origW - dx;
+          h = keepAspect ? w * aspect : this.drag.origH + dy;
+          x = this.drag.origX + this.drag.origW - w;
+        } else if (corner === "ne") {
+          w = this.drag.origW + dx;
+          h = keepAspect ? w * aspect : this.drag.origH - dy;
+          y = this.drag.origY + this.drag.origH - h;
+        } else if (corner === "nw") {
+          w = this.drag.origW - dx;
+          h = keepAspect ? w * aspect : this.drag.origH - dy;
+          x = this.drag.origX + this.drag.origW - w;
+          y = this.drag.origY + this.drag.origH - h;
+        }
+
+        if (w < minSize) {
+          w = minSize;
+          if (corner.includes("w")) x = this.drag.origX + this.drag.origW - minSize;
+          if (keepAspect) {
+            h = w * aspect;
+            if (corner.includes("n")) y = this.drag.origY + this.drag.origH - h;
+          }
+        }
+        if (h < minSize) {
+          h = minSize;
+          if (corner.includes("n")) y = this.drag.origY + this.drag.origH - minSize;
+          if (keepAspect) {
+            w = h / aspect;
+            if (corner.includes("w")) x = this.drag.origX + this.drag.origW - w;
+          }
+        }
+
+        ov.x = Math.max(0, x);
+        ov.y = Math.max(0, y);
+        ov.w = w;
+        ov.h = h;
+        if (this.imageWidthInput) this.imageWidthInput.value = String(Math.round(ov.w));
+        this._paintOverlays();
+        return;
+      }
+
       ov.x = Math.max(0, this.drag.origX + dx);
       ov.y = Math.max(0, this.drag.origY + dy);
       if (ov.type === "native") {
@@ -1222,6 +1581,7 @@
 
       this.overlays[this.pageIndex] = this._pageOverlays().filter((o) => o.id !== this.selectedId);
       this.selectedId = null;
+      this._syncImageSizeToolbar(null);
       this._paintOverlays();
       this._setStatus("Item removed.");
     }
@@ -1232,10 +1592,184 @@
       this.overlays[this.pageIndex] = [];
       this.pageText[this.pageIndex] = undefined;
       this.selectedId = null;
+      this._syncImageSizeToolbar(null);
       this._extractNativeText(this.pageIndex).then(() => {
         this._paintOverlays();
         this._setStatus("Cleared added overlays and reset text edits on this page.");
       });
+    }
+
+    _bindCropUi() {
+      this.root.querySelector("[data-editor-crop-cancel]")?.addEventListener("click", () => this.closeCropModal());
+      this.root.querySelector("[data-editor-crop-apply]")?.addEventListener("click", () => this.applyCrop());
+      this.cropModal?.addEventListener("click", (e) => {
+        if (e.target === this.cropModal) this.closeCropModal();
+      });
+
+      const onDown = (e) => {
+        if (!this.cropSession || !this.cropBox) return;
+        const handle = e.target.closest("[data-crop-handle]");
+        const onBox = e.target.closest("[data-editor-crop-box]");
+        if (!handle && !onBox) return;
+        e.preventDefault();
+        const rect = this.cropBox.getBoundingClientRect();
+        this.cropSession.drag = {
+          kind: handle ? "resize" : "move",
+          corner: handle?.getAttribute("data-crop-handle") || null,
+          startX: e.clientX,
+          startY: e.clientY,
+          orig: { ...this.cropSession.box },
+          boxW: rect.width,
+          boxH: rect.height,
+        };
+      };
+      const onMove = (e) => {
+        const session = this.cropSession;
+        if (!session?.drag) return;
+        const img = this.cropImg;
+        if (!img) return;
+        const dispW = img.clientWidth;
+        const dispH = img.clientHeight;
+        if (!dispW || !dispH) return;
+        const scaleX = session.naturalW / dispW;
+        const scaleY = session.naturalH / dispH;
+        const dx = (e.clientX - session.drag.startX) * scaleX;
+        const dy = (e.clientY - session.drag.startY) * scaleY;
+        let { x, y, w, h } = session.drag.orig;
+        const min = 8;
+
+        if (session.drag.kind === "move") {
+          x = Math.max(0, Math.min(session.naturalW - w, x + dx));
+          y = Math.max(0, Math.min(session.naturalH - h, y + dy));
+        } else {
+          const c = session.drag.corner;
+          if (c.includes("e")) w = session.drag.orig.w + dx;
+          if (c.includes("s")) h = session.drag.orig.h + dy;
+          if (c.includes("w")) {
+            w = session.drag.orig.w - dx;
+            x = session.drag.orig.x + dx;
+          }
+          if (c.includes("n")) {
+            h = session.drag.orig.h - dy;
+            y = session.drag.orig.y + dy;
+          }
+          if (w < min) {
+            if (c.includes("w")) x = session.drag.orig.x + session.drag.orig.w - min;
+            w = min;
+          }
+          if (h < min) {
+            if (c.includes("n")) y = session.drag.orig.y + session.drag.orig.h - min;
+            h = min;
+          }
+          if (x < 0) {
+            w += x;
+            x = 0;
+          }
+          if (y < 0) {
+            h += y;
+            y = 0;
+          }
+          if (x + w > session.naturalW) w = session.naturalW - x;
+          if (y + h > session.naturalH) h = session.naturalH - y;
+        }
+        session.box = { x, y, w, h };
+        this._paintCropBox();
+      };
+      const onUp = () => {
+        if (this.cropSession) this.cropSession.drag = null;
+      };
+      this.cropStage?.addEventListener("pointerdown", onDown);
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    }
+
+    _paintCropBox() {
+      if (!this.cropSession || !this.cropBox || !this.cropImg) return;
+      const { box, naturalW, naturalH } = this.cropSession;
+      const dispW = this.cropImg.clientWidth;
+      const dispH = this.cropImg.clientHeight;
+      if (!dispW || !dispH) return;
+      const sx = dispW / naturalW;
+      const sy = dispH / naturalH;
+      this.cropBox.style.left = `${box.x * sx}px`;
+      this.cropBox.style.top = `${box.y * sy}px`;
+      this.cropBox.style.width = `${box.w * sx}px`;
+      this.cropBox.style.height = `${box.h * sy}px`;
+    }
+
+    async openCropSelected() {
+      const item = this._findItem(this.selectedId);
+      if (!item || item.type !== "image") {
+        this._setStatus("Select an image first, then click Crop image.", true);
+        return;
+      }
+      try {
+        const img = await loadHtmlImage(item.imageUrl);
+        const naturalW = img.naturalWidth || item.naturalW || Math.round(item.w);
+        const naturalH = img.naturalHeight || item.naturalH || Math.round(item.h);
+        this.cropSession = {
+          id: item.id,
+          naturalW,
+          naturalH,
+          box: {
+            x: Math.round(naturalW * 0.1),
+            y: Math.round(naturalH * 0.1),
+            w: Math.round(naturalW * 0.8),
+            h: Math.round(naturalH * 0.8),
+          },
+          drag: null,
+        };
+        if (this.cropImg) {
+          this.cropImg.onload = () => this._paintCropBox();
+          this.cropImg.src = item.imageUrl;
+        }
+        if (this.cropModal) this.cropModal.hidden = false;
+        requestAnimationFrame(() => this._paintCropBox());
+        this._setStatus("Adjust the crop box, then Apply crop.");
+      } catch (err) {
+        this._setStatus(err.message || String(err), true);
+      }
+    }
+
+    closeCropModal() {
+      this.cropSession = null;
+      if (this.cropModal) this.cropModal.hidden = true;
+      if (this.cropImg) this.cropImg.removeAttribute("src");
+    }
+
+    async applyCrop() {
+      const session = this.cropSession;
+      if (!session) return;
+      const item = this._findItem(session.id);
+      if (!item || item.type !== "image") {
+        this.closeCropModal();
+        return;
+      }
+      try {
+        const src = await loadHtmlImage(item.imageUrl);
+        const { x, y, w, h } = session.box;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(w));
+        canvas.height = Math.max(1, Math.round(h));
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(src, x, y, w, h, 0, 0, canvas.width, canvas.height);
+        const payload = await canvasToPngPayload(canvas, "cropped.png");
+        this._pushHistory();
+        const prevW = item.w;
+        item.imageUrl = payload.url;
+        item.imageBytes = payload.bytes;
+        item.imageType = "image/png";
+        item.naturalW = payload.naturalW;
+        item.naturalH = payload.naturalH;
+        item.w = prevW;
+        item.h = prevW * (payload.naturalH / Math.max(1, payload.naturalW));
+        this.closeCropModal();
+        this._syncImageSizeToolbar(item);
+        this._paintOverlays();
+        this._setStatus("Image cropped. Ctrl+Z to undo.");
+      } catch (err) {
+        this._setStatus(err.message || String(err), true);
+      }
     }
 
     async exportPdfFile(filename = "edited.pdf") {
