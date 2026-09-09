@@ -60,8 +60,8 @@ cd tools
 docker compose up --build tools
 ```
 
-Open: http://localhost:8080  
-Health: http://localhost:8080/api/health  
+Open: http://127.0.0.1:18080  
+Health: http://127.0.0.1:18080/api/health  
 
 First build installs LibreOffice and can take several minutes.
 
@@ -99,24 +99,27 @@ copy .env.example .env
 CLOUDFLARE_TUNNEL_TOKEN=eyJ...your-token...
 ```
 
-### C. Public hostname (routes traffic into Docker)
+### C. Published application routes (traffic stays on Docker networks)
 
-Still in the tunnel wizard / tunnel **Public Hostname** tab:
+In the Cloudflare dashboard: **Networking → Tunnels** → select this tunnel → **Routes** → **Add route** → **Published application**.
 
-| Field | Value |
-|-------|--------|
-| Subdomain | `tools` |
-| Domain | `devstrand.com` |
-| Type | `HTTP` |
-| URL | `http://host.docker.internal:8080` |
+Host ports **80 / 443 / 8080** are not used. `cloudflared` reaches apps by Docker DNS on `toolsnet` (and `expense-tracker_default` for the expense tracker). Bind host ports to **127.0.0.1** only, for local testing.
 
-**Do not use** `localhost`, `https://…`, or `tools:8080` if you started cloudflared with Cloudflare’s plain `docker run` command (that container is not on the Compose network, so `tools` won’t resolve).
+| Subdomain | Domain | Type | Service URL |
+|-----------|--------|------|-------------|
+| `tools` | `devstrand.com` | HTTP | `http://tools:8080` |
+| `pdf` | `devstrand.com` | HTTP | `http://tools:8080` |
+| `expensetracker` | `devstrand.com` | HTTP | `http://nginx:80` |
 
-`host.docker.internal` reaches the tools app published on your PC’s port **8080** (Docker Desktop).
+Local browser (not public): PDF tools at http://127.0.0.1:18080 — expense tracker at http://127.0.0.1:18081.
 
-Save. Cloudflare will create the DNS CNAME for `tools.devstrand.com` automatically.
+**Do not** use `localhost`, `https://…`, `host.docker.internal`, or a second `docker run cloudflared` (that container is not on Compose networks, so `tools` / `nginx` will not resolve).
 
-> Run **only one** cloudflared. Extra `docker run cloudflare/cloudflared …` containers fight the Compose one and often cause `no such host` / `connection refused` errors.
+Save. Cloudflare creates a proxied CNAME for each hostname automatically.
+
+> Run **only one** cloudflared (the Compose service). Extra connectors with the same token fight each other.
+>
+> Start the expense-tracker compose stack first so `expense-tracker_default` exists; otherwise `docker compose up` here cannot attach cloudflared to that network.
 
 ### D. Start both containers
 

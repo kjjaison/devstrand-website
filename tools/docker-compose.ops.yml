@@ -1,0 +1,40 @@
+# Ops UIs — Portainer + Dozzle (loopback only).
+# Usage on OVH:
+#   docker compose -f docker-compose.yml -f docker-compose.ops.yml up -d
+#
+# From your laptop (keep SSH open):
+#   ssh -L 9000:127.0.0.1:9000 -L 9443:127.0.0.1:9443 -L 8081:127.0.0.1:8081 ubuntu@YOUR_OVH_IP
+#   Portainer: https://localhost:9443  (or http://localhost:9000)
+#   Dozzle:    http://localhost:8081
+
+services:
+  portainer:
+    image: portainer/portainer-ce:2.27.1
+    container_name: portainer
+    restart: unless-stopped
+    command: --http-enabled
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9443:9443"
+    networks:
+      - toolsnet
+
+  dozzle:
+    image: amir20/dozzle:v8.12.14
+    container_name: dozzle
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      DOZZLE_NO_ANALYTICS: "true"
+      DOZZLE_LEVEL: info
+    networks:
+      - toolsnet
+
+volumes:
+  portainer_data:

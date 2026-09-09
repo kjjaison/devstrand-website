@@ -4,9 +4,10 @@ services:
       context: .
       dockerfile: Dockerfile
     image: devstrand-tools:local
-    # Local access only; public traffic comes via Cloudflare Tunnel
+    # Local browser only (loopback, unprivileged). Public traffic is
+    # Cloudflare Tunnel over toolsnet — not this host port.
     ports:
-      - "8080:8080"
+      - "127.0.0.1:18080:8080"
     environment:
       MAX_UPLOAD_MB: "100"
       MAX_COMPRESS_MB: "100"
@@ -27,27 +28,31 @@ services:
     networks:
       - toolsnet
 
-  # Exposes tools.devstrand.com without a static IP or open ports.
-  # Requires CLOUDFLARE_TUNNEL_TOKEN in tools/.env
+  # Exposes tools.devstrand.com / pdf.devstrand.com without a static IP
+  # or open ports. Requires CLOUDFLARE_TUNNEL_TOKEN in tools/.env
   #
-  # Cloudflare Public Hostname must be:
-  #   Type: HTTP
-  #   URL:  http://host.docker.internal:8080
-  # Do NOT use https:// or the hostname "tools" unless cloudflared is
-  # started by this compose file on toolsnet.
+  # Cloudflare Published application Service URLs (HTTP):
+  #   tools.devstrand.com + pdf.devstrand.com → http://tools:8080
+  #   expensetracker.devstrand.com            → http://nginx:80
+  # cloudflared must stay on this compose file (toolsnet) so it can
+  # resolve `tools`. It is also attached to expense-tracker_default
+  # so it can resolve `nginx`. Do not use host.docker.internal, :80,
+  # or :8080 on the host.
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in tools/.env}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - tools
     networks:
       - toolsnet
+      - expense-tracker
 
 networks:
   toolsnet:
     driver: bridge
+  expense-tracker:
+    external: true
+    name: expense-tracker_default
