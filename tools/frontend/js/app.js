@@ -130,6 +130,27 @@ const TOOLS = [
     ],
   },
   {
+    id: "unlock",
+    title: "Unlock PDF",
+    desc: "Remove password protection by entering the PDF password.",
+    keywords: "unlock pdf remove password decrypt open protected",
+    accept: ".pdf,application/pdf",
+    multiple: false,
+    endpoint: "/api/unlock",
+    hint: "Enter the password that opens this PDF. We write an unlocked copy — the original stays on your device.",
+    reorder: false,
+    fields: [
+      {
+        name: "password",
+        label: "PDF password",
+        type: "password",
+        value: "",
+        placeholder: "Enter password",
+        autocomplete: "current-password",
+      },
+    ],
+  },
+  {
     id: "pdf-to-word",
     title: "PDF to Word",
     desc: "Convert PDF to DOCX (best-effort layout).",
@@ -1393,10 +1414,11 @@ function openTool(tool) {
       });
     } else {
       input = document.createElement("input");
-      input.type = "text";
+      input.type = field.type === "password" ? "password" : "text";
       input.name = field.name;
       if (field.placeholder) input.placeholder = field.placeholder;
       if (field.value != null) input.value = field.value;
+      if (field.autocomplete) input.autocomplete = field.autocomplete;
     }
     label.appendChild(input);
     options.appendChild(label);

@@ -51,6 +51,7 @@ PATH_TO_TOOL = {
     "/api/ocr": "ocr",
     "/api/esign": "esign",
     "/api/watermark": "watermark",
+    "/api/unlock": "unlock",
     "/api/pdf-to-word": "pdf-to-word",
     "/api/word-to-pdf": "word-to-pdf",
     "/api/pdf-to-excel": "pdf-to-excel",

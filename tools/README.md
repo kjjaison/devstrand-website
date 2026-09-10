@@ -10,6 +10,7 @@ PDF & document utilities for DevStrand. Runs in **Docker** (LibreOffice + FastAP
 | Merge / Split / Compress PDF | `pypdf` + Ghostscript (compress levels: low → maximum) |
 | Edit PDF | Header/footer text + rotate |
 | Watermark PDF | Diagonal text stamp |
+| Unlock PDF | Remove password protection (enter the known password) |
 | PDF ↔ JPG | Poppler + Pillow |
 | JPG → PDF | Pillow |
 | Word → PDF / Excel → PDF | LibreOffice |

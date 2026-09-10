@@ -1178,6 +1178,39 @@ async def watermark_pdf(
         raise HTTPException(400, f"Watermark failed: {exc}") from exc
 
 
+@app.post("/api/unlock")
+async def unlock_pdf(
+    file: UploadFile = File(...),
+    password: str = Form(""),
+):
+    """Remove PDF password protection using the supplied password (owner/user)."""
+    data = await _read_upload(file)
+    work = _workdir()
+    try:
+        reader = PdfReader(io.BytesIO(data))
+        if not reader.is_encrypted:
+            raise HTTPException(400, "This PDF is not password-protected.")
+        # pypdf: 0 = failed; non-zero = decrypted (user or owner password).
+        if reader.decrypt(password or "") == 0:
+            raise HTTPException(400, "Incorrect password — could not unlock this PDF.")
+        writer = PdfWriter()
+        for page in reader.pages:
+            writer.add_page(page)
+        if reader.metadata:
+            try:
+                writer.add_metadata(reader.metadata)
+            except Exception:
+                pass
+        out = work / "unlocked.pdf"
+        with out.open("wb") as fh:
+            writer.write(fh)
+        return _file_response(out, "unlocked.pdf", "application/pdf")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(400, f"Unlock failed: {exc}") from exc
+
+
 @app.post("/api/edit")
 async def edit_pdf(
     file: UploadFile = File(...),
