@@ -308,15 +308,18 @@ async def usage_middleware(request: Request, call_next):
 
 
 def _require_usage_admin(x_usage_token: str | None = None, token: str | None = None) -> None:
-    expected = usage_log.USAGE_ADMIN_TOKEN
+    expected = usage_log.admin_token()
     if not expected:
         raise HTTPException(
             503,
-            "USAGE_ADMIN_TOKEN is not set. Add it to tools/.env to enable usage analytics API.",
+            "USAGE_ADMIN_TOKEN is not set. Add it to tools/.env (no quotes), then: docker compose up -d --force-recreate tools",
         )
-    provided = (x_usage_token or token or "").strip()
-    if provided != expected:
-        raise HTTPException(401, "Invalid usage admin token.")
+    provided = (x_usage_token or token or "").strip().strip('"').strip("'")
+    if not provided or provided != expected:
+        raise HTTPException(
+            401,
+            "Invalid usage admin token. Use header X-Usage-Token with the exact USAGE_ADMIN_TOKEN from tools/.env",
+        )
 
 
 def _check_email_rate(ip: str) -> None:
@@ -468,7 +471,8 @@ def health():
         "share_max_mb": SHARE_MAX_MB,
         "share_ttl_minutes": sorted(SHARE_ALLOWED_MINUTES),
         "ocr_available": shutil.which("tesseract") is not None,
-        "usage_log_enabled": usage_log.USAGE_LOG_ENABLED,
+        "usage_log_enabled": usage_log.usage_enabled(),
+        "usage_admin_configured": bool(usage_log.admin_token()),
     }
 
 

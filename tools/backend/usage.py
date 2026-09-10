@@ -23,11 +23,24 @@ USAGE_LOG_ENABLED = os.environ.get("USAGE_LOG_ENABLED", "true").strip().lower() 
     "true",
     "yes",
 }
-USAGE_ADMIN_TOKEN = os.environ.get("USAGE_ADMIN_TOKEN", "").strip()
 USAGE_DIR = Path(os.environ.get("USAGE_LOG_DIR", os.environ.get("TOOLS_TMP", "/tmp/devstrand-tools"))) / "usage"
 USAGE_LOG_PATH = USAGE_DIR / "events.jsonl"
 
 _lock = threading.Lock()
+
+
+def usage_enabled() -> bool:
+    return os.environ.get("USAGE_LOG_ENABLED", "true").strip().lower() in {"1", "true", "yes"}
+
+
+def admin_token() -> str:
+    """Read token at call time so .env / compose updates apply after recreate."""
+    raw = os.environ.get("USAGE_ADMIN_TOKEN", "") or ""
+    return raw.strip().strip('"').strip("'")
+
+
+# Back-compat for older imports / health checks
+USAGE_ADMIN_TOKEN = admin_token()
 
 # Map API path → tool id for analysis
 PATH_TO_TOOL = {
@@ -93,7 +106,7 @@ def _parse_files_header(raw: str | None) -> list[dict[str, Any]]:
 
 
 def log_event(event: dict[str, Any]) -> None:
-    if not USAGE_LOG_ENABLED:
+    if not usage_enabled():
         return
     payload = {
         "ts": datetime.now(timezone.utc).isoformat(),
@@ -217,7 +230,8 @@ def summarize(events: list[dict[str, Any]] | None = None) -> dict[str, Any]:
 
     return {
         "ok": True,
-        "enabled": USAGE_LOG_ENABLED,
+        "enabled": usage_enabled(),
+        "admin_token_configured": bool(admin_token()),
         "log_path": str(USAGE_LOG_PATH),
         "total_events": len(rows),
         "tool_runs_ok": tool_ok,
