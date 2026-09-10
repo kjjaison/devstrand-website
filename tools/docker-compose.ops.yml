@@ -2,11 +2,12 @@
 # Usage on OVH:
 #   docker compose -f docker-compose.yml -f docker-compose.ops.yml up -d
 #
-# From your laptop (keep SSH open):
-#   ssh -L 9000:127.0.0.1:9000 -L 9443:127.0.0.1:9443 -L 8081:127.0.0.1:8081 ubuntu@YOUR_OVH_IP
-#   Portainer: https://localhost:9443  (or http://localhost:9000)
-#   Dozzle:    http://localhost:8081
-
+# From your laptop (keep ONE SSH open; use free local ports):
+#   ssh -L 19000:127.0.0.1:9000 -L 19443:127.0.0.1:9443 -L 18081:127.0.0.1:8081 ubuntu@YOUR_OVH_IP
+#   Portainer: https://localhost:19443  (or http://localhost:19000)
+#   Dozzle:    http://localhost:18081
+#
+# See OVH-REMOTE-OPS.md for what ssh -L does and "Address already in use" fixes.
 services:
   portainer:
     image: portainer/portainer-ce:2.27.1

@@ -170,12 +170,55 @@ docker compose logs -f cloudflared
 
 ---
 
+## Usage analytics
+
+Each tool run (and share / email / share-download) appends one JSON line with:
+
+| Field | Source |
+|-------|--------|
+| IP | `CF-Connecting-IP` / `X-Forwarded-For` |
+| Country | Cloudflare `CF-IPCountry` (when traffic goes through the tunnel) |
+| date/time | UTC ISO timestamp |
+| tool | merge, compress, ocr, … |
+| files | name + size (not file contents) |
+| shared | true when a share link is created / downloaded |
+| status / duration | HTTP status and ms |
+
+Logs: `/tmp/devstrand-tools/usage/events.jsonl` (Docker volume `tools-usage`).
+
+### Enable admin API
+
+In `tools/.env`:
+
+```env
+USAGE_LOG_ENABLED=true
+USAGE_ADMIN_TOKEN=your-long-random-secret
+```
+
+Restart: `docker compose up -d --force-recreate tools`
+
+### Full analysis
+
+```bash
+# Summary: counts by tool, country, day, shares
+curl -s -H "X-Usage-Token: YOUR_TOKEN" https://tools.devstrand.com/api/admin/usage | jq
+
+# On the VPS
+curl -s -H "X-Usage-Token: YOUR_TOKEN" http://127.0.0.1:18080/api/admin/usage | jq
+docker compose exec tools tail -n 50 /tmp/devstrand-tools/usage/events.jsonl
+```
+
+**Privacy:** this is operational analytics (IP + filenames). Mention it in your privacy notice if required (GDPR). Do not expose `USAGE_ADMIN_TOKEN`.
+
+---
+
 ## Security notes
 
 - Do **not** commit `.env` (token = full access to the tunnel)
 - Prefer Cloudflare Access (email login) later if the tools should not be fully public
 - Files are processed in temp dirs; add cleanup for long-running hosts
 - Increase limit with `MAX_UPLOAD_MB` in `docker-compose.yml` if needed
+- Protect `/api/admin/usage` with a strong `USAGE_ADMIN_TOKEN`
 
 ---
 
@@ -185,6 +228,8 @@ docker compose logs -f cloudflared
 tools/
   Dockerfile
   docker-compose.yml   # tools + cloudflared
+  docker-compose.ops.yml  # Portainer + Dozzle
+  OVH-REMOTE-OPS.md
   .env.example
   backend/
   frontend/

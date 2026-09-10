@@ -246,6 +246,8 @@ let sortScale = 1.4;
 let sortPreviewToken = 0;
 /** @type {{ blob: Blob, name: string } | null} */
 let lastResult = null;
+/** Last tool id that produced lastResult (for share/email analytics). */
+let lastResultToolId = null;
 let emailEnabled = false;
 let emailMaxMb = 20;
 let shareMaxMb = 50;
@@ -327,8 +329,39 @@ function syncEmailControls() {
   if (shareBtn) shareBtn.disabled = !hasResult;
 }
 
+function queueFileMeta() {
+  return queue
+    .filter((item) => item.file)
+    .map((item) => ({ name: item.file.name || "file", size: Number(item.file.size) || 0 }));
+}
+
+function usageHeaders(toolId) {
+  return {
+    "X-DevStrand-Tool": toolId || active?.id || "unknown",
+    "X-DevStrand-Files": JSON.stringify(queueFileMeta()),
+  };
+}
+
+async function reportClientUsage({ event = "tool_run", tool, files, shared = false } = {}) {
+  try {
+    await fetch("/api/usage-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...usageHeaders(tool) },
+      body: JSON.stringify({
+        event,
+        tool: tool || active?.id || "unknown",
+        files: files || queueFileMeta(),
+        shared: Boolean(shared),
+      }),
+    });
+  } catch (_) {
+    /* analytics must never block the user */
+  }
+}
+
 function showDeliveryPanel(blob, name) {
   lastResult = { blob, name };
+  lastResultToolId = active?.id || lastResultToolId;
   if (deliveryPanel) deliveryPanel.hidden = false;
   if (emailStatus) {
     emailStatus.textContent = "";
@@ -345,6 +378,7 @@ function showDeliveryPanel(blob, name) {
 
 function hideDeliveryPanel() {
   lastResult = null;
+  lastResultToolId = null;
   if (deliveryPanel) deliveryPanel.hidden = true;
   if (emailStatus) {
     emailStatus.textContent = "";
@@ -395,8 +429,12 @@ async function sendResultEmail() {
     const fd = new FormData();
     fd.append("file", lastResult.blob, lastResult.name);
     fd.append("to_email", to);
-    fd.append("tool_name", active?.title || "DevStrand Tools");
-    const res = await fetch("/api/email-result", { method: "POST", body: fd });
+    fd.append("tool_name", lastResultToolId || active?.id || "unknown");
+    const res = await fetch("/api/email-result", {
+      method: "POST",
+      body: fd,
+      headers: usageHeaders(lastResultToolId || active?.id),
+    });
     if (!res.ok) {
       let msg = `Error ${res.status}`;
       try {
@@ -432,7 +470,17 @@ async function createShareLink() {
     const fd = new FormData();
     fd.append("file", lastResult.blob, lastResult.name);
     fd.append("expires_minutes", String(minutes));
-    const res = await fetch("/api/share", { method: "POST", body: fd });
+    fd.append("tool_name", lastResultToolId || active?.id || "unknown");
+    const res = await fetch("/api/share", {
+      method: "POST",
+      body: fd,
+      headers: {
+        ...usageHeaders(lastResultToolId || active?.id),
+        "X-DevStrand-Files": JSON.stringify([
+          { name: lastResult.name, size: lastResult.blob.size },
+        ]),
+      },
+    });
     if (!res.ok) {
       let msg = `Error ${res.status}`;
       try {
@@ -1800,6 +1848,13 @@ form.addEventListener("submit", async (e) => {
       const edited = await editor.exportPdfFile(`${base}-edited.pdf`);
       downloadBlob(edited, edited.name);
       showDeliveryPanel(edited, edited.name);
+      await reportClientUsage({
+        event: "tool_run",
+        tool: "edit",
+        files: queueFileMeta().length
+          ? queueFileMeta()
+          : [{ name: edited.name, size: edited.size }],
+      });
       setStatus(
         emailEnabled
           ? "Done — edited PDF download started. You can email or share a temporary link below."
@@ -1838,7 +1893,11 @@ form.addEventListener("submit", async (e) => {
       fd.append("signature", sig, sig.name || "signature.png");
     }
 
-    const res = await fetch(active.endpoint, { method: "POST", body: fd });
+    const res = await fetch(active.endpoint, {
+      method: "POST",
+      body: fd,
+      headers: usageHeaders(active.id),
+    });
     if (!res.ok) {
       let msg = `Error ${res.status}`;
       try {

@@ -21,9 +21,12 @@ services:
       EMAIL_MAX_MB: ${EMAIL_MAX_MB:-20}
       SHARE_MAX_MB: ${SHARE_MAX_MB:-50}
       SHARE_RATE_LIMIT: ${SHARE_RATE_LIMIT:-20}
+      USAGE_LOG_ENABLED: ${USAGE_LOG_ENABLED:-true}
+      USAGE_ADMIN_TOKEN: ${USAGE_ADMIN_TOKEN:-}
     volumes:
       - ./frontend:/app/frontend:ro
       - ./backend:/app/backend:ro
+      - tools-usage:/tmp/devstrand-tools/usage
     restart: unless-stopped
     networks:
       - toolsnet
@@ -56,3 +59,6 @@ networks:
   expense-tracker:
     external: true
     name: expense-tracker_default
+
+volumes:
+  tools-usage:

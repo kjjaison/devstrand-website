@@ -19,11 +19,13 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pypdf import PdfReader, PdfWriter
+
+from . import usage as usage_log
 
 APP_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = APP_ROOT / "frontend"
@@ -273,10 +275,48 @@ def _email_configured() -> bool:
 
 
 def _client_ip(request: Request) -> str:
-    forwarded = request.headers.get("cf-connecting-ip") or request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    return usage_log.client_ip(request)
+
+
+@app.middleware("http")
+async def usage_middleware(request: Request, call_next):
+    path = request.url.path
+    track = path in usage_log.PATH_TO_TOOL or path.startswith("/api/share/")
+    started = time.perf_counter()
+    response = await call_next(request)
+    if not track:
+        return response
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    if path.startswith("/api/share/") and path.endswith("/download"):
+        usage_log.log_from_request(
+            request,
+            event="share_download",
+            tool="share-download",
+            status=response.status_code,
+            duration_ms=duration_ms,
+            shared=True,
+        )
+    elif path in usage_log.PATH_TO_TOOL and path not in {"/api/share", "/api/email-result"}:
+        usage_log.log_from_request(
+            request,
+            event="tool_run",
+            status=response.status_code,
+            duration_ms=duration_ms,
+            shared=False,
+        )
+    return response
+
+
+def _require_usage_admin(x_usage_token: str | None = None, token: str | None = None) -> None:
+    expected = usage_log.USAGE_ADMIN_TOKEN
+    if not expected:
+        raise HTTPException(
+            503,
+            "USAGE_ADMIN_TOKEN is not set. Add it to tools/.env to enable usage analytics API.",
+        )
+    provided = (x_usage_token or token or "").strip()
+    if provided != expected:
+        raise HTTPException(401, "Invalid usage admin token.")
 
 
 def _check_email_rate(ip: str) -> None:
@@ -428,7 +468,68 @@ def health():
         "share_max_mb": SHARE_MAX_MB,
         "share_ttl_minutes": sorted(SHARE_ALLOWED_MINUTES),
         "ocr_available": shutil.which("tesseract") is not None,
+        "usage_log_enabled": usage_log.USAGE_LOG_ENABLED,
     }
+
+
+@app.get("/api/admin/usage")
+def admin_usage_summary(
+    x_usage_token: str | None = Header(default=None, alias="X-Usage-Token"),
+    token: str | None = None,
+    limit: int = 200,
+):
+    """Full usage analysis — requires USAGE_ADMIN_TOKEN."""
+    _require_usage_admin(x_usage_token, token)
+    events = usage_log.iter_events()
+    summary = usage_log.summarize(events)
+    summary["recent"] = events[-max(1, min(limit, 500)) :]
+    return summary
+
+
+@app.get("/api/admin/usage/events")
+def admin_usage_events(
+    x_usage_token: str | None = Header(default=None, alias="X-Usage-Token"),
+    token: str | None = None,
+    limit: int = 100,
+):
+    _require_usage_admin(x_usage_token, token)
+    return {
+        "ok": True,
+        "count": min(limit, 1000),
+        "events": usage_log.iter_events(limit=max(1, min(limit, 1000))),
+    }
+
+
+@app.post("/api/usage-event")
+async def client_usage_event(request: Request):
+    """Lightweight client beacon (e.g. browser-only Edit PDF export)."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    tool = str(body.get("tool") or "unknown")[:64]
+    files = body.get("files") if isinstance(body.get("files"), list) else []
+    normalized = []
+    for item in files[:40]:
+        if isinstance(item, dict):
+            normalized.append(
+                {
+                    "name": str(item.get("name") or "")[:180],
+                    "size": max(0, int(item.get("size") or 0)),
+                }
+            )
+    usage_log.log_from_request(
+        request,
+        event=str(body.get("event") or "tool_run")[:64],
+        tool=tool,
+        status=200,
+        files=normalized,
+        shared=bool(body.get("shared")),
+        extra={"client_side": True},
+    )
+    return {"ok": True}
 
 
 @app.post("/api/email-result")
@@ -443,11 +544,21 @@ async def email_result(
     data = await file.read()
     if not data:
         raise HTTPException(400, "Empty file.")
+    filename = file.filename or "result.bin"
     _send_attachment_email(
         to_email=to_email.strip(),
-        filename=file.filename or "result.bin",
+        filename=filename,
         data=data,
         tool_name=tool_name or None,
+    )
+    usage_log.log_from_request(
+        request,
+        event="email_send",
+        tool=(tool_name or "email").strip() or "email",
+        status=200,
+        files=[{"name": _safe_name(filename, "result.bin"), "size": len(data)}],
+        shared=False,
+        extra={"email_domain": to_email.strip().split("@")[-1].lower() if "@" in to_email else ""},
     )
     return {"ok": True, "message": f"Sent to {to_email.strip()}"}
 
@@ -457,6 +568,7 @@ async def create_share(
     request: Request,
     file: UploadFile = File(...),
     expires_minutes: int = Form(60),
+    tool_name: str = Form(""),
 ):
     """Store a result briefly and return a shareable download URL."""
     import json
@@ -482,6 +594,7 @@ async def create_share(
     content_type = file.content_type or "application/octet-stream"
     now = time.time()
     expires_at = now + expires_minutes * 60
+    tool = (tool_name or request.headers.get("x-devstrand-tool") or "unknown").strip() or "unknown"
     meta = {
         "filename": filename,
         "content_type": content_type,
@@ -489,8 +602,20 @@ async def create_share(
         "created_at": now,
         "expires_at": expires_at,
         "expires_minutes": expires_minutes,
+        "tool": tool,
+        "creator_ip": _client_ip(request),
+        "creator_country": usage_log.client_country(request),
     }
     (folder / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+    usage_log.log_from_request(
+        request,
+        event="share_create",
+        tool=tool,
+        status=200,
+        files=[{"name": filename, "size": len(data)}],
+        shared=True,
+        extra={"expires_minutes": expires_minutes, "share_id": token[:8]},
+    )
     return {
         "ok": True,
         "id": token,
