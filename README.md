@@ -52,7 +52,7 @@ Replace placeholders:
 | Industries | `industries.html` |
 | Portfolio | `portfolio.html` |
 | Technologies | `technologies.html` |
-| Tools | `tools.html` |
+| Tools | Nav dropdown → PDF Editor, Image Editor, Live Translate (`tools.html` hub) |
 | Contact | `contact.html` |
 | Careers (hidden for now) | `careers.html` |
 | Blog (hidden for now) | `blog.html` |
