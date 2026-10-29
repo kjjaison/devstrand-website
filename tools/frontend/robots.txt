@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /s/
 Disallow: /api/share/
+Disallow: /internal/
 
 Sitemap: https://tools.devstrand.com/sitemap.xml

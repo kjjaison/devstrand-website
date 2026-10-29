@@ -209,6 +209,14 @@ curl -s -H "X-Usage-Token: YOUR_TOKEN" http://127.0.0.1:18080/api/admin/usage | 
 docker compose exec tools tail -n 50 /tmp/devstrand-tools/usage/events.jsonl
 ```
 
+### Private dashboard
+
+[https://tools.devstrand.com/internal/usage](https://tools.devstrand.com/internal/usage)
+
+Not linked from the public site. Sign in with `USAGE_ADMIN_TOKEN`. The page then loads PDF tools from this server, and image editor plus LiveTranslate from their admin APIs. The browser never receives the other apps' tokens.
+
+Use the same token in each app's `.env`, or set `IMAGE_USAGE_TOKEN` and `LIVETRANSLATE_USAGE_TOKEN` here when they differ. Optional URL overrides: `IMAGE_USAGE_URL`, `LIVETRANSLATE_USAGE_URL`.
+
 **Privacy:** this is operational analytics (IP + filenames). Mention it in your privacy notice if required (GDPR). Do not expose `USAGE_ADMIN_TOKEN`.
 
 ---
@@ -219,7 +227,7 @@ docker compose exec tools tail -n 50 /tmp/devstrand-tools/usage/events.jsonl
 - Prefer Cloudflare Access (email login) later if the tools should not be fully public
 - Files are processed in temp dirs; add cleanup for long-running hosts
 - Increase limit with `MAX_UPLOAD_MB` in `docker-compose.yml` if needed
-- Protect `/api/admin/usage` with a strong `USAGE_ADMIN_TOKEN`
+- Protect `/api/admin/usage` and `/internal/usage` with a strong `USAGE_ADMIN_TOKEN`
 
 ---
 

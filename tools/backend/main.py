@@ -26,6 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from pypdf import PdfReader, PdfWriter
 
 from . import usage as usage_log
+from .usage_dashboard import register_usage_dashboard
 
 APP_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = APP_ROOT / "frontend"
@@ -502,6 +503,9 @@ def admin_usage_events(
         "count": min(limit, 1000),
         "events": usage_log.iter_events(limit=max(1, min(limit, 1000))),
     }
+
+
+register_usage_dashboard(app)
 
 
 @app.post("/api/usage-event")
