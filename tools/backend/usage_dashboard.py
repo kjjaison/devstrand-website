@@ -19,6 +19,9 @@ from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
+from fastapi import Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+
 from . import usage as usage_log
 
 COOKIE = "ds_usage"
@@ -84,9 +87,7 @@ def _secure_cookie(request) -> bool:
     return request.url.scheme == "https"
 
 
-def _page(body: str, status: int = 200):
-    from fastapi.responses import HTMLResponse
-
+def _page(body: str, status: int = 200) -> HTMLResponse:
     return HTMLResponse(body, status_code=status, headers=_HEADERS)
     return HTMLResponse(body, status_code=status, headers=_HEADERS)
 
@@ -351,8 +352,6 @@ def _event_rows_multi(items: list[tuple[str, dict[str, Any]]]) -> str:
 
 
 def register_usage_dashboard(app) -> None:
-    from fastapi import Form, Request
-    from fastapi.responses import HTMLResponse, RedirectResponse
     @app.get("/internal/usage", response_class=HTMLResponse)
     def usage_page(request: Request):
         if not usage_log.admin_token():
