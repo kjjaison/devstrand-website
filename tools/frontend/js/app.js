@@ -152,7 +152,7 @@ const TOOLS = [
     reorder: false,
     interactiveEdit: true,
     /** Prefer the dedicated PDF editor host when opened from tools.devstrand.com */
-    externalUrl: "https://pdf.devstrand.com/#edit",
+    externalUrl: "https://pdf.devstrand.com/edit",
   },
   {
     id: "ocr",
@@ -1415,6 +1415,32 @@ function updateWorkspaceFileState() {
   }
 }
 
+function setDocumentSeo(tool) {
+  const baseTitle = "Free PDF tools — merge, compress, e-sign, convert | DevStrand Tools";
+  const baseDesc =
+    "Free online PDF tools: merge, split, compress, organize, rotate, protect, page numbers, edit, OCR, e-sign, watermark, unlock, JPG↔PDF, and Office conversion. No signup. No permanent storage.";
+  const title = tool ? `${tool.title} — free online | DevStrand Tools` : baseTitle;
+  const description = tool
+    ? `${tool.desc} Free on DevStrand Tools. No signup. Ephemeral processing.`
+    : baseDesc;
+  document.title = title;
+  const descEl = document.querySelector('meta[name="description"]');
+  if (descEl) descEl.setAttribute("content", description);
+  const canonical = document.querySelector('link[rel="canonical"]');
+  if (canonical) {
+    canonical.setAttribute("href", tool ? `${location.origin}/${tool.id}` : `${location.origin}/`);
+  }
+  const ogTitle = document.querySelector('meta[property="og:title"]');
+  if (ogTitle) ogTitle.setAttribute("content", title);
+  const ogDesc = document.querySelector('meta[property="og:description"]');
+  if (ogDesc) ogDesc.setAttribute("content", description);
+  const ogUrl = document.querySelector('meta[property="og:url"]');
+  if (ogUrl) ogUrl.setAttribute("href", tool ? `${location.origin}/${tool.id}` : `${location.origin}/`);
+  if (ogUrl && ogUrl.hasAttribute("content")) {
+    ogUrl.setAttribute("content", tool ? `${location.origin}/${tool.id}` : `${location.origin}/`);
+  }
+}
+
 function showAllTools() {
   workspace.hidden = true;
   workspace.classList.remove("has-file");
@@ -1426,9 +1452,8 @@ function showAllTools() {
   statusEl.textContent = "";
   statusEl.className = "status";
   document.querySelectorAll(".tool-card.active").forEach((el) => el.classList.remove("active"));
-  if (location.hash && location.hash !== "#tools") {
-    history.replaceState(null, "", `${location.pathname}${location.search}#tools`);
-  }
+  history.replaceState(null, "", "/");
+  setDocumentSeo(null);
   (homeView || grid)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1587,7 +1612,8 @@ function openTool(tool) {
   const activeCard = document.querySelector(`.tool-card[data-tool-id="${tool.id}"]`);
   if (activeCard) activeCard.classList.add("active");
   if (tool.id) {
-    history.replaceState(null, "", `${location.pathname}${location.search}#${tool.id}`);
+    history.replaceState(null, "", `/${tool.id}`);
+    setDocumentSeo(tool);
   }
 
   document.getElementById("wsTitle").textContent = tool.title;
@@ -2289,12 +2315,29 @@ function escapeAttr(s) {
   return escapeHtml(s).replace(/'/g, "&#39;");
 }
 
-function openFromHash() {
+function openFromLocation() {
+  const pathId = location.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+  if (pathId && pathId !== "tools") {
+    const byPath = TOOLS.find((t) => t.id === pathId);
+    if (byPath) {
+      openTool(byPath);
+      return;
+    }
+  }
+  const bootId = (document.body?.dataset?.openTool || "").trim().toLowerCase();
+  if (bootId) {
+    const byBoot = TOOLS.find((t) => t.id === bootId);
+    if (byBoot) {
+      openTool(byBoot);
+      return;
+    }
+  }
   const id = (location.hash || "").replace(/^#/, "").trim().toLowerCase();
   if (!id || id === "tools") return;
   const tool = TOOLS.find((t) => t.id === id);
   if (tool) openTool(tool);
 }
 
-window.addEventListener("hashchange", openFromHash);
-openFromHash();
+window.addEventListener("hashchange", openFromLocation);
+window.addEventListener("popstate", openFromLocation);
+openFromLocation();

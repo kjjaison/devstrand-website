@@ -3,3 +3,5 @@ Allow: /
 
 Sitemap: https://devstrand.com/sitemap.xml
 Sitemap: https://tools.devstrand.com/sitemap.xml
+Sitemap: https://pdf.devstrand.com/sitemap.xml
+Sitemap: https://image.devstrand.com/sitemap.xml

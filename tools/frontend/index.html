@@ -40,7 +40,26 @@
           "JPG to PDF", "PDF to JPG", "PDF to Word", "Word to PDF", "PDF to Excel", "Excel to PDF",
           "PDF to PowerPoint", "Shareable expiring links"
         ],
-        "publisher": { "@type": "Organization", "name": "DevStrand", "url": "https://devstrand.com" }
+        "publisher": { "@type": "Organization", "name": "DevStrand", "url": "https://devstrand.com" },
+        "isAccessibleForFree": true,
+        "sameAs": [
+          "https://pdf.devstrand.com/",
+          "https://devstrand.com/tools.html",
+          "https://image.devstrand.com/tools"
+        ]
+      },
+      {
+        "@type": "ItemList",
+        "name": "DevStrand PDF tools",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Merge PDF", "url": "https://tools.devstrand.com/merge" },
+          { "@type": "ListItem", "position": 2, "name": "Compress PDF", "url": "https://tools.devstrand.com/compress" },
+          { "@type": "ListItem", "position": 3, "name": "Edit PDF", "url": "https://pdf.devstrand.com/edit" },
+          { "@type": "ListItem", "position": 4, "name": "PDF to JPG", "url": "https://tools.devstrand.com/pdf-to-jpg" },
+          { "@type": "ListItem", "position": 5, "name": "JPG to PDF", "url": "https://tools.devstrand.com/jpg-to-pdf" },
+          { "@type": "ListItem", "position": 6, "name": "E-sign PDF", "url": "https://tools.devstrand.com/esign" },
+          { "@type": "ListItem", "position": 7, "name": "OCR Document", "url": "https://tools.devstrand.com/ocr" }
+        ]
       },
       {
         "@type": "FAQPage",
@@ -159,7 +178,7 @@
         <details class="faq-item">
           <summary>What else does DevStrand offer?</summary>
           <p>
-            <a href="https://image.devstrand.com/">Image studio</a> ·
+            <a href="https://image.devstrand.com/tools">Image tools</a> ·
             <a href="https://livetranslate.devstrand.com/">LiveTranslate</a> ·
             <a href="https://devstrand.com/">Company site</a>
           </p>
@@ -343,6 +362,6 @@
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
   <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js" defer></script>
   <script src="/static/js/editor.js?v=12" defer></script>
-  <script src="/static/js/app.js?v=29" defer></script>
+  <script src="/static/js/app.js?v=30" defer></script>
 </body>
 </html>

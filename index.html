@@ -3,15 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DevStrand — Data. Intelligence. Solutions.</title>
-  <meta name="description" content="DevStrand builds intelligent, scalable, and secure digital solutions through excellence in database development, AI, and web & mobile development." />
+  <title>DevStrand — Data. Intelligence. Solutions. | Software, AI &amp; free PDF tools</title>
+  <meta name="description" content="DevStrand builds intelligent software — databases, AI, web &amp; mobile — plus free PDF tools, image tools, LiveTranslate, and Chat. Irish company, CRO 821307." />
   <meta name="theme-color" content="#070a14" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
   <link rel="canonical" href="https://devstrand.com/" />
+  <meta property="og:site_name" content="DevStrand" />
+  <meta property="og:locale" content="en_IE" />
   <meta property="og:title" content="DevStrand — Data. Intelligence. Solutions." />
-  <meta property="og:description" content="To empower businesses by building intelligent, scalable, and secure digital solutions through excellence in database development, AI, and web & mobile development." />
+  <meta property="og:description" content="Software, AI, and free online PDF &amp; image tools from an Irish technology company." />
   <meta property="og:image" content="https://devstrand.com/assets/logo.png" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://devstrand.com/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="DevStrand — Data. Intelligence. Solutions." />
+  <meta name="twitter:description" content="Software, AI, and free online PDF &amp; image tools from an Irish technology company." />
+  <meta name="twitter:image" content="https://devstrand.com/assets/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
@@ -41,8 +48,10 @@
             <svg class="nav-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="nav-dropdown" role="menu">
-            <a href="https://tools.devstrand.com/" target="_blank" rel="noopener noreferrer" role="menuitem">PDF Editor</a>
-            <a href="https://image.devstrand.com/" target="_blank" rel="noopener noreferrer" role="menuitem">Image Editor</a>
+            <a href="https://tools.devstrand.com/" target="_blank" rel="noopener noreferrer" role="menuitem">PDF tools</a>
+            <a href="https://pdf.devstrand.com/edit" target="_blank" rel="noopener noreferrer" role="menuitem">PDF editor</a>
+            <a href="images.html" role="menuitem">Image tools</a>
+            <a href="https://image.devstrand.com/tools" target="_blank" rel="noopener noreferrer" role="menuitem">Open image app</a>
             <a href="https://livetranslate.devstrand.com/" target="_blank" rel="noopener noreferrer" role="menuitem">Live Translate</a>
             <a href="https://chat.devstrand.com/" target="_blank" rel="noopener noreferrer" role="menuitem">Chat</a>
           </div>
@@ -353,8 +362,10 @@
           <h4>Connect</h4>
           <a href="mailto:info@devstrand.com">Email</a>
           <a href="https://www.linkedin.com/company/devstrand" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-          <a href="https://tools.devstrand.com/" target="_blank" rel="noopener noreferrer">PDF Editor</a>
-          <a href="https://image.devstrand.com/" target="_blank" rel="noopener noreferrer">Image Editor</a>
+          <a href="tools.html">PDF tools</a>
+          <a href="images.html">Image tools</a>
+          <a href="https://tools.devstrand.com/" target="_blank" rel="noopener noreferrer">Open PDF tools</a>
+          <a href="https://image.devstrand.com/tools" target="_blank" rel="noopener noreferrer">Open image tools</a>
           <a href="https://livetranslate.devstrand.com/" target="_blank" rel="noopener noreferrer">Live Translate</a>
           <a href="https://chat.devstrand.com/" target="_blank" rel="noopener noreferrer">Chat</a>
         </div>
@@ -368,17 +379,35 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "DevStrand",
-    "url": "https://devstrand.com",
-    "logo": "https://devstrand.com/assets/logo.png",
-    "email": "info@devstrand.com",
-    "description": "To empower businesses by building intelligent, scalable, and secure digital solutions through excellence in database development, AI, and web & mobile development.",
-    "slogan": "Data. Intelligence. Solutions.",
-    "address": {
-      "@type": "PostalAddress",
-      "addressCountry": "IE"
-    }
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://devstrand.com/#organization",
+        "name": "DevStrand",
+        "url": "https://devstrand.com",
+        "logo": "https://devstrand.com/assets/logo.png",
+        "email": "info@devstrand.com",
+        "description": "Irish software company building intelligent, scalable digital solutions — databases, AI, web & mobile — plus free PDF and image tools.",
+        "slogan": "Data. Intelligence. Solutions.",
+        "address": { "@type": "PostalAddress", "addressCountry": "IE" },
+        "sameAs": [
+          "https://www.linkedin.com/company/devstrand",
+          "https://tools.devstrand.com/",
+          "https://pdf.devstrand.com/",
+          "https://image.devstrand.com/",
+          "https://livetranslate.devstrand.com/",
+          "https://chat.devstrand.com/"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://devstrand.com/#website",
+        "url": "https://devstrand.com/",
+        "name": "DevStrand",
+        "publisher": { "@id": "https://devstrand.com/#organization" },
+        "inLanguage": "en-IE"
+      }
+    ]
   }
   </script>
   <script src="js/main.js"></script>

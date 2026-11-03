@@ -5,3 +5,6 @@ Disallow: /api/share/
 Disallow: /internal/
 
 Sitemap: https://tools.devstrand.com/sitemap.xml
+Sitemap: https://pdf.devstrand.com/sitemap.xml
+Sitemap: https://image.devstrand.com/sitemap.xml
+Sitemap: https://devstrand.com/sitemap.xml

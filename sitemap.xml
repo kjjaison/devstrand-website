@@ -7,5 +7,22 @@
   <url><loc>https://devstrand.com/portfolio.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://devstrand.com/technologies.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://devstrand.com/tools.html</loc><changefreq>weekly</changefreq><priority>0.95</priority></url>
+  <url><loc>https://devstrand.com/images.html</loc><changefreq>weekly</changefreq><priority>0.95</priority></url>
   <url><loc>https://devstrand.com/contact.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://devstrand.com/careers.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://devstrand.com/blog.html</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://tools.devstrand.com/</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://pdf.devstrand.com/</loc><changefreq>daily</changefreq><priority>0.85</priority></url>
+  <url><loc>https://pdf.devstrand.com/edit</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://image.devstrand.com/</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://image.devstrand.com/tools</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://image.devstrand.com/editor</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://image.devstrand.com/passport</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://image.devstrand.com/generate</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://image.devstrand.com/tools/resizer</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://image.devstrand.com/tools/compressor</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://image.devstrand.com/tools/heic-to-jpg</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://image.devstrand.com/tools/webp-to-jpg</loc><changefreq>weekly</changefreq><priority>0.75</priority></url>
+  <url><loc>https://image.devstrand.com/tools/meme</loc><changefreq>weekly</changefreq><priority>0.75</priority></url>
+  <url><loc>https://image.devstrand.com/tools/pdf-to-jpg</loc><changefreq>weekly</changefreq><priority>0.75</priority></url>
 </urlset>

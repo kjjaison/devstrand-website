@@ -26,6 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from pypdf import PdfReader, PdfWriter
 
 from . import usage as usage_log
+from .seo import TOOL_SEO, build_sitemap, inject_tool_seo
 from .usage_dashboard import register_usage_dashboard
 
 APP_ROOT = Path(__file__).resolve().parent.parent
@@ -1581,26 +1582,54 @@ async def pdf_to_powerpoint(file: UploadFile = File(...)):
         raise HTTPException(400, f"PDF to PowerPoint failed: {exc}") from exc
 
 
+def _public_base(request: Request) -> str:
+    host = (request.headers.get("host") or "tools.devstrand.com").split(":")[0].lower()
+    if host in {"pdf.devstrand.com", "tools.devstrand.com", "localhost", "127.0.0.1"}:
+        scheme = "http" if host in {"localhost", "127.0.0.1"} else "https"
+        if host in {"localhost", "127.0.0.1"}:
+            return f"{scheme}://{request.headers.get('host') or host}"
+        return f"https://{host}"
+    return "https://tools.devstrand.com"
+
+
 # Static frontend
 if FRONTEND.exists():
     app.mount("/static", StaticFiles(directory=FRONTEND), name="static")
 
     @app.get("/")
-    def index():
+    def index(request: Request):
         html = (FRONTEND / "index.html").read_text(encoding="utf-8")
+        base = _public_base(request)
+        # Keep canonical host-aware on the homepage
+        html = html.replace('href="https://tools.devstrand.com/"', f'href="{base}/"', 1)
+        html = html.replace('content="https://tools.devstrand.com/"', f'content="{base}/"', 1)
         return HTMLResponse(html)
 
     @app.get("/robots.txt", response_class=PlainTextResponse)
-    def robots_txt():
-        path = FRONTEND / "robots.txt"
-        return path.read_text(encoding="utf-8") if path.exists() else "User-agent: *\nAllow: /\n"
+    def robots_txt(request: Request):
+        base = _public_base(request)
+        return (
+            "User-agent: *\n"
+            "Allow: /\n"
+            "Disallow: /s/\n"
+            "Disallow: /api/share/\n"
+            "Disallow: /internal/\n"
+            f"\nSitemap: {base}/sitemap.xml\n"
+            "Sitemap: https://tools.devstrand.com/sitemap.xml\n"
+            "Sitemap: https://pdf.devstrand.com/sitemap.xml\n"
+            "Sitemap: https://image.devstrand.com/sitemap.xml\n"
+            "Sitemap: https://devstrand.com/sitemap.xml\n"
+        )
 
     @app.get("/sitemap.xml")
-    def sitemap_xml():
-        path = FRONTEND / "sitemap.xml"
-        body = path.read_text(encoding="utf-8") if path.exists() else (
-            '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            "<url><loc>https://tools.devstrand.com/</loc></url></urlset>"
-        )
+    def sitemap_xml(request: Request):
+        body = build_sitemap(_public_base(request))
         return Response(content=body, media_type="application/xml")
+
+    @app.get("/{tool_id}")
+    def tool_seo_page(tool_id: str, request: Request):
+        slug = tool_id.strip().lower()
+        if slug not in TOOL_SEO:
+            raise HTTPException(404, "Tool not found")
+        html = (FRONTEND / "index.html").read_text(encoding="utf-8")
+        return HTMLResponse(inject_tool_seo(html, slug, _public_base(request)))
