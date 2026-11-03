@@ -151,6 +151,8 @@ const TOOLS = [
     hint: "Upload a PDF, then edit on the large canvas — zoom, stamps, text, images (resize/crop), Ctrl+Z undo.",
     reorder: false,
     interactiveEdit: true,
+    /** Prefer the dedicated PDF editor host when opened from tools.devstrand.com */
+    externalUrl: "https://pdf.devstrand.com/#edit",
   },
   {
     id: "ocr",
@@ -1562,7 +1564,21 @@ function clearQueue() {
   updateWorkspaceFileState();
 }
 
+function shouldOpenExternally(tool) {
+  if (!tool?.externalUrl) return false;
+  try {
+    const target = new URL(tool.externalUrl, location.href);
+    return target.host !== location.host;
+  } catch {
+    return true;
+  }
+}
+
 function openTool(tool) {
+  if (shouldOpenExternally(tool)) {
+    window.location.assign(tool.externalUrl);
+    return;
+  }
   active = tool;
   if (homeView) homeView.hidden = true;
   workspace.hidden = false;
