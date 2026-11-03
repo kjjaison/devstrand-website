@@ -4,6 +4,8 @@ const TOOLS = [
     title: "Merge PDF",
     desc: "Combine multiple PDFs into one file.",
     keywords: "merge combine join unite concatenate pdf",
+    category: "organize",
+    icon: "⧉",
     accept: ".pdf,application/pdf",
     multiple: true,
     endpoint: "/api/merge",
@@ -15,6 +17,8 @@ const TOOLS = [
     title: "Split PDF",
     desc: "Split into pages or custom ranges.",
     keywords: "split extract pages ranges separate",
+    category: "organize",
+    icon: "⧉",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/split",
@@ -34,10 +38,26 @@ const TOOLS = [
     ],
   },
   {
+    id: "organize",
+    title: "Organize PDF",
+    desc: "Reorder or remove pages, then download — stays in your browser.",
+    keywords: "organize reorder delete remove pages rearrange sort",
+    category: "organize",
+    icon: "☰",
+    accept: ".pdf,application/pdf",
+    multiple: false,
+    endpoint: "/api/organize",
+    hint: "Drag pages to reorder. Remove any you do not need, then Run to download.",
+    reorder: "pages",
+    clientOrganize: true,
+  },
+  {
     id: "compress",
     title: "Compress PDF",
     desc: "Reduce PDF size with low → maximum compression levels.",
     keywords: "compress reduce shrink size optimize smaller",
+    category: "optimize",
+    icon: "↓",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/compress",
@@ -58,10 +78,73 @@ const TOOLS = [
     ],
   },
   {
+    id: "rotate",
+    title: "Rotate PDF",
+    desc: "Turn every page 90°, 180°, or 270° clockwise.",
+    keywords: "rotate turn flip orientation landscape portrait",
+    category: "optimize",
+    icon: "↻",
+    accept: ".pdf,application/pdf",
+    multiple: false,
+    endpoint: "/api/rotate",
+    hint: "One PDF. Choose how far to rotate, then Run.",
+    reorder: "pages",
+    fields: [
+      {
+        name: "degrees",
+        label: "Rotate clockwise",
+        type: "select",
+        options: [
+          { value: "90", label: "90°" },
+          { value: "180", label: "180°" },
+          { value: "270", label: "270°" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "page-numbers",
+    title: "Page numbers",
+    desc: "Stamp page numbers on every page.",
+    keywords: "page numbers numbering footer header pagination",
+    category: "optimize",
+    icon: "#",
+    accept: ".pdf,application/pdf",
+    multiple: false,
+    endpoint: "/api/page-numbers",
+    hint: "One PDF. Pick position and starting number, then Run.",
+    reorder: "pages",
+    fields: [
+      {
+        name: "position",
+        label: "Position",
+        type: "select",
+        options: [
+          { value: "bottom-center", label: "Bottom centre" },
+          { value: "bottom-right", label: "Bottom right" },
+          { value: "bottom-left", label: "Bottom left" },
+          { value: "top-center", label: "Top centre" },
+          { value: "top-right", label: "Top right" },
+          { value: "top-left", label: "Top left" },
+        ],
+      },
+      { name: "start", label: "Start at", type: "text", value: "1" },
+      {
+        name: "format_text",
+        label: "Format",
+        type: "text",
+        value: "{n}",
+        placeholder: "{n} or {n} / {total}",
+      },
+    ],
+  },
+  {
     id: "edit",
     title: "Edit PDF",
     desc: "Interactive editor — add or remove text and images, stamps, resize & crop.",
     keywords: "edit text image annotate modify change stamp tick cross crop resize undo",
+    category: "edit",
+    icon: "✎",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/edit",
@@ -74,6 +157,8 @@ const TOOLS = [
     title: "OCR Document",
     desc: "OCR scanned PDFs, images, Word, Excel, and PowerPoint into a searchable PDF.",
     keywords: "ocr scan searchable text recognition tesseract image word jpg png",
+    category: "edit",
+    icon: "Aa",
     accept:
       ".pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.bmp,.gif,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.ods,.csv,.ppt,.pptx,.odp,application/pdf,image/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation",
     multiple: true,
@@ -97,6 +182,8 @@ const TOOLS = [
     title: "E-sign PDF",
     desc: "Type, draw, or upload a signature and stamp it onto your PDF.",
     keywords: "esign e-sign sign signature typed name draw stamp",
+    category: "edit",
+    icon: "✍",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/esign",
@@ -120,6 +207,8 @@ const TOOLS = [
     title: "Watermark PDF",
     desc: "Stamp diagonal text across every page.",
     keywords: "watermark stamp confidential draft brand",
+    category: "edit",
+    icon: "〰",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/watermark",
@@ -134,6 +223,8 @@ const TOOLS = [
     title: "Unlock PDF",
     desc: "Remove password protection by entering the PDF password.",
     keywords: "unlock pdf remove password decrypt open protected",
+    category: "secure",
+    icon: "🔓",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/unlock",
@@ -151,10 +242,43 @@ const TOOLS = [
     ],
   },
   {
+    id: "protect",
+    title: "Protect PDF",
+    desc: "Add a password so the PDF cannot be opened without it.",
+    keywords: "protect encrypt password lock secure private",
+    category: "secure",
+    icon: "🔒",
+    accept: ".pdf,application/pdf",
+    multiple: false,
+    endpoint: "/api/protect",
+    hint: "Set a password (min 4 characters). Anyone opening the PDF will need it.",
+    reorder: false,
+    fields: [
+      {
+        name: "password",
+        label: "User password",
+        type: "password",
+        value: "",
+        placeholder: "At least 4 characters",
+        autocomplete: "new-password",
+      },
+      {
+        name: "owner_password",
+        label: "Owner password (optional)",
+        type: "password",
+        value: "",
+        placeholder: "Defaults to user password",
+        autocomplete: "new-password",
+      },
+    ],
+  },
+  {
     id: "pdf-to-word",
     title: "PDF to Word",
     desc: "Convert PDF to DOCX (best-effort layout).",
     keywords: "pdf word docx convert export",
+    category: "convert",
+    icon: "W",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/pdf-to-word",
@@ -165,6 +289,8 @@ const TOOLS = [
     title: "Word to PDF",
     desc: "Convert DOC/DOCX to PDF via LibreOffice.",
     keywords: "word doc docx to pdf convert",
+    category: "convert",
+    icon: "W",
     accept: ".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     multiple: false,
     endpoint: "/api/word-to-pdf",
@@ -175,6 +301,8 @@ const TOOLS = [
     title: "PDF to Excel",
     desc: "Extract tables/text into an XLSX workbook.",
     keywords: "pdf excel xlsx spreadsheet tables extract",
+    category: "convert",
+    icon: "X",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/pdf-to-excel",
@@ -185,6 +313,8 @@ const TOOLS = [
     title: "Excel to PDF",
     desc: "Convert spreadsheets to PDF.",
     keywords: "excel xls xlsx csv to pdf convert",
+    category: "convert",
+    icon: "X",
     accept: ".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     multiple: false,
     endpoint: "/api/excel-to-pdf",
@@ -195,6 +325,8 @@ const TOOLS = [
     title: "PDF to PowerPoint",
     desc: "Each page becomes a slide image.",
     keywords: "pdf powerpoint pptx slides convert",
+    category: "convert",
+    icon: "P",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/pdf-to-powerpoint",
@@ -205,6 +337,8 @@ const TOOLS = [
     title: "PDF to JPG",
     desc: "Render pages to JPG images (ZIP).",
     keywords: "pdf jpg jpeg image export render",
+    category: "convert",
+    icon: "▣",
     accept: ".pdf,application/pdf",
     multiple: false,
     endpoint: "/api/pdf-to-jpg",
@@ -216,6 +350,8 @@ const TOOLS = [
     title: "JPG to PDF",
     desc: "Build a PDF from one or more images.",
     keywords: "jpg jpeg png webp image to pdf photos",
+    category: "convert",
+    icon: "▣",
     accept: ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp",
     multiple: true,
     endpoint: "/api/jpg-to-pdf",
@@ -223,6 +359,16 @@ const TOOLS = [
     reorder: "files",
   },
 ];
+
+const CATEGORIES = [
+  { id: "organize", label: "Organize" },
+  { id: "optimize", label: "Optimize" },
+  { id: "edit", label: "Edit & sign" },
+  { id: "secure", label: "Secure" },
+  { id: "convert", label: "Convert" },
+];
+
+const POPULAR = ["merge", "compress", "jpg-to-pdf", "esign", "ocr", "organize"];
 
 const grid = document.getElementById("tools");
 const workspace = document.getElementById("workspace");
@@ -1172,14 +1318,63 @@ function queueOriginalBytes() {
   return file ? file.size : null;
 }
 
-TOOLS.forEach((tool) => {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "tool-card";
-  btn.dataset.toolId = tool.id;
-  btn.innerHTML = `<h3>${tool.title}</h3><p>${tool.desc}</p>`;
-  btn.addEventListener("click", () => openTool(tool));
-  grid.appendChild(btn);
+function toolMatchesQuery(tool, q) {
+  if (!q) return true;
+  const hay = `${tool.title} ${tool.desc} ${tool.keywords || ""} ${tool.category || ""}`.toLowerCase();
+  return q.split(/\s+/).filter(Boolean).every((part) => hay.includes(part));
+}
+
+function renderToolGrid(filter = "") {
+  if (!grid) return;
+  const q = filter.trim().toLowerCase();
+  grid.innerHTML = "";
+  let shown = 0;
+  CATEGORIES.forEach((cat) => {
+    const tools = TOOLS.filter((t) => t.category === cat.id && toolMatchesQuery(t, q));
+    if (!tools.length) return;
+    const section = document.createElement("section");
+    section.className = "tool-group";
+    section.innerHTML = `<h2 class="tool-group-title">${escapeHtml(cat.label)}</h2>`;
+    const row = document.createElement("div");
+    row.className = "tool-group-grid";
+    tools.forEach((tool) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tool-card";
+      btn.dataset.toolId = tool.id;
+      btn.innerHTML = `<span class="tool-icon" aria-hidden="true">${escapeHtml(tool.icon || "•")}</span><h3>${escapeHtml(tool.title)}</h3><p>${escapeHtml(tool.desc)}</p>`;
+      btn.addEventListener("click", () => openTool(tool));
+      row.appendChild(btn);
+      shown += 1;
+    });
+    section.appendChild(row);
+    grid.appendChild(section);
+  });
+  if (!shown) {
+    const empty = document.createElement("p");
+    empty.className = "tool-empty hint";
+    empty.textContent = "No tools match that search. Try “merge”, “compress”, or “jpg”.";
+    grid.appendChild(empty);
+  }
+  if (active) {
+    const activeCard = document.querySelector(`.tool-card[data-tool-id="${active.id}"]`);
+    if (activeCard) activeCard.classList.add("active");
+  }
+}
+
+renderToolGrid();
+
+const toolSearch = document.getElementById("toolSearch");
+if (toolSearch) {
+  toolSearch.addEventListener("input", () => renderToolGrid(toolSearch.value));
+}
+
+document.querySelectorAll("[data-open-tool]").forEach((el) => {
+  el.addEventListener("click", (e) => {
+    e.preventDefault();
+    const tool = TOOLS.find((t) => t.id === el.getAttribute("data-open-tool"));
+    if (tool) openTool(tool);
+  });
 });
 
 function showAllTools() {
@@ -1191,6 +1386,9 @@ function showAllTools() {
   statusEl.textContent = "";
   statusEl.className = "status";
   document.querySelectorAll(".tool-card.active").forEach((el) => el.classList.remove("active"));
+  if (location.hash && location.hash !== "#tools") {
+    history.replaceState(null, "", `${location.pathname}${location.search}#tools`);
+  }
   grid.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1331,6 +1529,9 @@ function openTool(tool) {
   document.querySelectorAll(".tool-card.active").forEach((el) => el.classList.remove("active"));
   const activeCard = document.querySelector(`.tool-card[data-tool-id="${tool.id}"]`);
   if (activeCard) activeCard.classList.add("active");
+  if (tool.id) {
+    history.replaceState(null, "", `${location.pathname}${location.search}#${tool.id}`);
+  }
 
   document.getElementById("wsTitle").textContent = tool.title;
   document.getElementById("wsDesc").textContent = tool.desc;
@@ -1886,6 +2087,25 @@ form.addEventListener("submit", async (e) => {
       return;
     }
 
+    // Organize PDF — reorder/remove pages in the browser, no upload of the result
+    if (active.clientOrganize) {
+      if (!queue.length) throw new Error("Add at least one page.");
+      const ordered = await buildOrderedPdfFile();
+      if (!ordered) throw new Error("Could not build the reordered PDF.");
+      const base = (queue[0]?.file?.name || "document").replace(/\.pdf$/i, "");
+      const name = `${base}-organized.pdf`;
+      const file = new File([await ordered.arrayBuffer()], name, { type: "application/pdf" });
+      downloadBlob(file, name);
+      showDeliveryPanel(file, name);
+      await reportClientUsage({
+        event: "tool_run",
+        tool: "organize",
+        files: [{ name, size: file.size }],
+      });
+      setStatus("Done — organized PDF download started. Page reorder stayed in your browser.", false);
+      return;
+    }
+
     const fd = new FormData();
     if (active.id === "ocr") {
       // Send both field names for API compatibility (file + files)
@@ -2005,3 +2225,13 @@ function escapeHtml(s) {
 function escapeAttr(s) {
   return escapeHtml(s).replace(/'/g, "&#39;");
 }
+
+function openFromHash() {
+  const id = (location.hash || "").replace(/^#/, "").trim().toLowerCase();
+  if (!id || id === "tools") return;
+  const tool = TOOLS.find((t) => t.id === id);
+  if (tool) openTool(tool);
+}
+
+window.addEventListener("hashchange", openFromHash);
+openFromHash();

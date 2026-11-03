@@ -7,10 +7,11 @@ PDF & document utilities for DevStrand. Runs in **Docker** (LibreOffice + FastAP
 
 | Tool | Notes |
 |------|--------|
-| Merge / Split / Compress PDF | `pypdf` + Ghostscript (compress levels: low → maximum) |
-| Edit PDF | Header/footer text + rotate |
+| Merge / Split / Organize PDF | Merge & split server-side; organize reorders/removes pages in the browser |
+| Compress / Rotate / Page numbers | Ghostscript compress levels; rotate 90/180/270; stamp page numbers |
+| Edit PDF | Interactive editor — text, images, stamps, crop |
 | Watermark PDF | Diagonal text stamp |
-| Unlock PDF | Remove password protection (enter the known password) |
+| Unlock / Protect PDF | Remove or add password protection |
 | PDF ↔ JPG | Poppler + Pillow |
 | JPG → PDF | Pillow |
 | Word → PDF / Excel → PDF | LibreOffice |

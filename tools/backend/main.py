@@ -1215,6 +1215,140 @@ async def unlock_pdf(
         raise HTTPException(400, f"Unlock failed: {exc}") from exc
 
 
+@app.post("/api/rotate")
+async def rotate_pdf(
+    file: UploadFile = File(...),
+    degrees: int = Form(90),
+):
+    """Rotate every page by 90, 180, or 270 degrees clockwise."""
+    if degrees not in (90, 180, 270):
+        raise HTTPException(400, "degrees must be 90, 180, or 270.")
+    data = await _read_upload(file)
+    work = _workdir()
+    try:
+        reader = PdfReader(io.BytesIO(data))
+        writer = PdfWriter()
+        for page in reader.pages:
+            page.rotate(degrees)
+            writer.add_page(page)
+        out = work / "rotated.pdf"
+        with out.open("wb") as fh:
+            writer.write(fh)
+        return _file_response(out, "rotated.pdf", "application/pdf")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(400, f"Rotate failed: {exc}") from exc
+
+
+@app.post("/api/protect")
+async def protect_pdf(
+    file: UploadFile = File(...),
+    password: str = Form(...),
+    owner_password: str = Form(""),
+):
+    """Encrypt a PDF with a user password (and optional owner password)."""
+    pwd = (password or "").strip()
+    if len(pwd) < 4:
+        raise HTTPException(400, "Password must be at least 4 characters.")
+    if len(pwd) > 128:
+        raise HTTPException(400, "Password is too long.")
+    data = await _read_upload(file)
+    work = _workdir()
+    try:
+        reader = PdfReader(io.BytesIO(data))
+        if reader.is_encrypted:
+            raise HTTPException(400, "This PDF is already password-protected. Unlock it first.")
+        writer = PdfWriter()
+        for page in reader.pages:
+            writer.add_page(page)
+        if reader.metadata:
+            try:
+                writer.add_metadata(reader.metadata)
+            except Exception:
+                pass
+        owner = (owner_password or "").strip() or pwd
+        writer.encrypt(pwd, owner, algorithm="AES-256")
+        out = work / "protected.pdf"
+        with out.open("wb") as fh:
+            writer.write(fh)
+        return _file_response(out, "protected.pdf", "application/pdf")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(400, f"Protect failed: {exc}") from exc
+
+
+@app.post("/api/page-numbers")
+async def page_numbers_pdf(
+    file: UploadFile = File(...),
+    position: str = Form("bottom-center"),
+    start: int = Form(1),
+    format_text: str = Form("{n}"),
+):
+    """Stamp page numbers on every page."""
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.lib.colors import HexColor
+
+    pos = (position or "bottom-center").strip().lower()
+    allowed = {
+        "bottom-center",
+        "bottom-right",
+        "bottom-left",
+        "top-center",
+        "top-right",
+        "top-left",
+    }
+    if pos not in allowed:
+        raise HTTPException(400, "Invalid position.")
+    start_n = max(1, min(int(start or 1), 9999))
+    template = (format_text or "{n}")[:40]
+    data = await _read_upload(file)
+    work = _workdir()
+    try:
+        reader = PdfReader(io.BytesIO(data))
+        writer = PdfWriter()
+        total = len(reader.pages)
+        for i, page in enumerate(reader.pages):
+            box = page.mediabox
+            width = float(box.width)
+            height = float(box.height)
+            n = start_n + i
+            label = (
+                template.replace("{n}", str(n))
+                .replace("{total}", str(total))
+                .replace("{N}", str(n))
+            )[:48]
+            packet = io.BytesIO()
+            c = rl_canvas.Canvas(packet, pagesize=(width, height))
+            c.setFillColor(HexColor("#333333"))
+            c.setFont("Helvetica", 10)
+            margin = 28
+            if "top" in pos:
+                y = height - margin
+            else:
+                y = margin
+            if "left" in pos:
+                c.drawString(margin, y, label)
+            elif "right" in pos:
+                c.drawRightString(width - margin, y, label)
+            else:
+                c.drawCentredString(width / 2, y, label)
+            c.save()
+            packet.seek(0)
+            overlay = PdfReader(packet).pages[0]
+            page.merge_page(overlay)
+            writer.add_page(page)
+        out = work / "numbered.pdf"
+        with out.open("wb") as fh:
+            writer.write(fh)
+        return _file_response(out, "numbered.pdf", "application/pdf")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(400, f"Page numbers failed: {exc}") from exc
+
+
 @app.post("/api/edit")
 async def edit_pdf(
     file: UploadFile = File(...),
