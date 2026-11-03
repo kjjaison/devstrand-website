@@ -371,6 +371,7 @@ const CATEGORIES = [
 const POPULAR = ["merge", "compress", "jpg-to-pdf", "esign", "ocr", "organize"];
 
 const grid = document.getElementById("tools");
+const homeView = document.getElementById("homeView");
 const workspace = document.getElementById("workspace");
 const form = document.getElementById("toolForm");
 const fileInput = document.getElementById("fileInput");
@@ -379,6 +380,9 @@ const options = document.getElementById("options");
 const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("runBtn");
 const fileHint = document.getElementById("fileHint");
+const dropTitle = document.getElementById("dropTitle");
+const dropCta = document.getElementById("dropCta");
+const dropOr = document.getElementById("dropOr");
 const sortPanel = document.getElementById("sortPanel");
 const sortGallery = document.getElementById("sortGallery");
 const sortHint = document.getElementById("sortHint");
@@ -1377,8 +1381,42 @@ document.querySelectorAll("[data-open-tool]").forEach((el) => {
   });
 });
 
+function selectLabelsFor(tool) {
+  const accept = (tool?.accept || "").toLowerCase();
+  const hasPdf = accept.includes("pdf");
+  const hasImage = accept.includes("image") || /\.(jpe?g|png|webp|gif|tif)/.test(accept);
+  const hasOffice = /\.(doc|xls|ppt|odt|ods|odp)/.test(accept);
+  const pdfOnly = hasPdf && !hasImage && !hasOffice;
+  const imageOnly = hasImage && !hasPdf && !hasOffice;
+  if (tool?.multiple) {
+    if (pdfOnly) return { title: "Select PDF files", cta: "Select PDF files", or: "or drop PDFs here" };
+    if (imageOnly) return { title: "Select image files", cta: "Select images", or: "or drop images here" };
+    return { title: "Select files", cta: "Select files", or: "or drop files here" };
+  }
+  if (pdfOnly) return { title: "Select PDF file", cta: "Select PDF file", or: "or drop a PDF here" };
+  if (imageOnly) return { title: "Select image file", cta: "Select image", or: "or drop an image here" };
+  return { title: "Select file", cta: "Select file", or: "or drop a file here" };
+}
+
+function updateWorkspaceFileState() {
+  if (!workspace) return;
+  const hasFile = queue.length > 0;
+  workspace.classList.toggle("has-file", hasFile);
+  if (hasFile && dropTitle) {
+    dropTitle.textContent = active?.multiple ? "Add more files" : "Replace file";
+    if (dropOr) dropOr.textContent = "or drop another";
+  } else if (active) {
+    const labels = selectLabelsFor(active);
+    if (dropTitle) dropTitle.textContent = labels.title;
+    if (dropCta) dropCta.textContent = labels.cta;
+    if (dropOr) dropOr.textContent = labels.or;
+  }
+}
+
 function showAllTools() {
   workspace.hidden = true;
+  workspace.classList.remove("has-file");
+  if (homeView) homeView.hidden = false;
   active = null;
   clearQueue();
   form.reset();
@@ -1389,7 +1427,7 @@ function showAllTools() {
   if (location.hash && location.hash !== "#tools") {
     history.replaceState(null, "", `${location.pathname}${location.search}#tools`);
   }
-  grid.scrollIntoView({ behavior: "smooth", block: "start" });
+  (homeView || grid)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 const backBtn = document.getElementById("backBtn");
@@ -1463,15 +1501,16 @@ if (menuBackdrop) {
   menuBackdrop.addEventListener("click", () => closeToolsMenu());
 }
 
+document.querySelectorAll('[data-menu-action="home"]').forEach((el) => {
+  el.addEventListener("click", (e) => {
+    e.preventDefault();
+    closeToolsMenu();
+    showAllTools();
+  });
+});
+
 if (menuDropdown) {
   menuDropdown.addEventListener("click", (e) => {
-    const home = e.target.closest('[data-menu-action="home"]');
-    if (home) {
-      e.preventDefault();
-      closeToolsMenu();
-      showAllTools();
-      return;
-    }
     const item = e.target.closest(".dropdown-item[data-tool-id]");
     if (item) {
       e.preventDefault();
@@ -1520,10 +1559,12 @@ function clearQueue() {
   } catch (_) {
     if (pdfEditorRoot) pdfEditorRoot.hidden = true;
   }
+  updateWorkspaceFileState();
 }
 
 function openTool(tool) {
   active = tool;
+  if (homeView) homeView.hidden = true;
   workspace.hidden = false;
   clearQueue();
   document.querySelectorAll(".tool-card.active").forEach((el) => el.classList.remove("active"));
@@ -1536,10 +1577,11 @@ function openTool(tool) {
   document.getElementById("wsTitle").textContent = tool.title;
   document.getElementById("wsDesc").textContent = tool.desc;
   fileHint.textContent = tool.hint || "Choose file(s) to continue.";
-  const dropTitle = document.getElementById("dropTitle");
-  if (dropTitle) {
-    dropTitle.textContent = tool.multiple ? "Drop one or more files here" : "Drop a file here";
-  }
+  const labels = selectLabelsFor(tool);
+  if (dropTitle) dropTitle.textContent = labels.title;
+  if (dropCta) dropCta.textContent = labels.cta;
+  if (dropOr) dropOr.textContent = labels.or;
+  updateWorkspaceFileState();
   fileInput.accept = tool.accept;
   fileInput.multiple = !!tool.multiple;
   if (tool.multiple) fileInput.setAttribute("multiple", "multiple");
@@ -1705,6 +1747,7 @@ async function ingestFiles(files, { append }) {
     if (active.interactiveEdit) {
       const file = files[0];
       queue = [{ id: "edit-src", kind: "file", file, label: file.name }];
+      updateWorkspaceFileState();
       const editor = getPdfEditor();
       if (!editor) throw new Error("Editor is still loading. Try again in a moment.");
       await editor.load(await file.arrayBuffer());
@@ -1736,6 +1779,7 @@ async function ingestFiles(files, { append }) {
         queue.push(item);
       }
       renderGallery();
+      updateWorkspaceFileState();
       if (queue.length) selectQueueItem(queue[0].id);
     } else {
       // No visual reorder — keep a simple single/multi file queue for submit
@@ -1747,9 +1791,11 @@ async function ingestFiles(files, { append }) {
       }));
       sortPanel.hidden = true;
       sortGallery.innerHTML = "";
+      updateWorkspaceFileState();
       setStatus(`${files.length} file(s) ready.`, false);
       return;
     }
+    updateWorkspaceFileState();
     setStatus(`${queue.length} item(s) ready — drag to rearrange.`, false);
     if (active.id === "compress") {
       updateCompressSizeInfo(queueOriginalBytes(), null);
@@ -2028,6 +2074,7 @@ function removeQueueItem(id) {
   renderGallery();
   if (selectedQueueId) selectQueueItem(selectedQueueId);
   else clearSortStage();
+  updateWorkspaceFileState();
   setStatus(queue.length ? `${queue.length} item(s) ready.` : "Add files to continue.", !queue.length);
 }
 

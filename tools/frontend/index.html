@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Allura&family=Caveat:wght@600&family=Dancing+Script:wght@600;700&family=Great+Vibes&family=Homemade+Apple&family=Pacifico&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sacramento&family=Satisfy&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/styles.css?v=25" />
+  <link rel="stylesheet" href="/static/css/styles.css?v=26" />
   <link rel="icon" href="https://devstrand.com/assets/logo-icon.png" type="image/png" />
   <script type="application/ld+json">
   {
@@ -84,11 +84,12 @@
       <span>Dev<span>Strand</span> Tools</span>
     </a>
     <div class="topbar-actions">
-      <nav class="topbar-links" aria-label="Site">
-        <a href="https://image.devstrand.com/">Image studio</a>
-        <a href="https://livetranslate.devstrand.com/">LiveTranslate</a>
-        <a href="https://devstrand.com/">Company</a>
-        <a href="https://devstrand.com/contact.html">Contact</a>
+      <nav class="topbar-links" aria-label="Popular PDF tools">
+        <button type="button" class="topbar-tool" data-open-tool="merge">Merge PDF</button>
+        <button type="button" class="topbar-tool" data-open-tool="split">Split PDF</button>
+        <button type="button" class="topbar-tool" data-open-tool="compress">Compress PDF</button>
+        <button type="button" class="topbar-tool" data-open-tool="pdf-to-jpg">PDF to JPG</button>
+        <a href="#tools" data-menu-action="home">All tools</a>
       </nav>
       <div class="menu-dropdown" id="menuDropdown">
         <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="menuList" aria-haspopup="menu" aria-label="Open menu">
@@ -108,87 +109,78 @@
   <div class="menu-backdrop" id="menuBackdrop"></div>
 
   <main class="wrap">
-    <section class="hero">
-      <p class="brand-mark">DevStrand Tools</p>
-      <h1>PDF work without the account wall.</h1>
-      <p class="lead">Merge, compress, e-sign, OCR, organize pages, protect with a password, and convert Office files — free, up to 100&nbsp;MB, with no permanent storage.</p>
-      <div class="hero-actions">
-        <a class="btn" href="#tools">Browse all tools</a>
-        <button type="button" class="btn btn-secondary" data-open-tool="merge">Merge PDF</button>
-        <button type="button" class="btn btn-secondary" data-open-tool="compress">Compress</button>
-      </div>
-      <p class="trust-line">No signup · Ephemeral processing · Share links expire</p>
-    </section>
+    <div id="homeView">
+      <section class="home-task">
+        <h1>Every tool you need to work with PDFs</h1>
+        <p class="lead">Pick a tool — merge, compress, convert, e-sign, and more. No signup. No permanent storage.</p>
+        <p class="trust-line">Free · up to 100&nbsp;MB · ephemeral processing</p>
 
-    <aside class="trust-strip" aria-label="Privacy">
-      <strong>No permanent storage.</strong>
-      Files are processed ephemerally on the tools server. Downloads stay on your device. Organize PDF reorders pages in the browser. Optional email and share links are temporary — share links self-delete after expiry (15 minutes to 24 hours).
-    </aside>
+        <div class="home-search">
+          <label class="sr-only" for="toolSearch">Search tools</label>
+          <input type="search" id="toolSearch" placeholder="Search tools — merge, compress, e-sign, jpg…" autocomplete="off" />
+        </div>
 
-    <section class="popular" aria-label="Popular tools">
-      <p class="eyebrow">Start here</p>
-      <div class="popular-row">
-        <button type="button" class="popular-chip" data-open-tool="merge">Merge</button>
-        <button type="button" class="popular-chip" data-open-tool="compress">Compress</button>
-        <button type="button" class="popular-chip" data-open-tool="organize">Organize</button>
-        <button type="button" class="popular-chip" data-open-tool="esign">E-sign</button>
-        <button type="button" class="popular-chip" data-open-tool="ocr">OCR</button>
-        <button type="button" class="popular-chip" data-open-tool="jpg-to-pdf">JPG → PDF</button>
-        <button type="button" class="popular-chip" data-open-tool="protect">Protect</button>
-        <button type="button" class="popular-chip" data-open-tool="rotate">Rotate</button>
-      </div>
-    </section>
-
-    <div class="tool-search-wrap">
-      <label class="sr-only" for="toolSearch">Search tools</label>
-      <input type="search" id="toolSearch" placeholder="Search tools — merge, compress, e-sign, jpg…" autocomplete="off" />
-    </div>
-
-    <noscript>
-      <section style="padding-bottom: 2rem">
-        <h2>Available PDF tools</h2>
-        <ul>
-          <li>Merge / Split / Organize PDF</li>
-          <li>Compress / Rotate / Page numbers</li>
-          <li>Edit / OCR / E-sign / Watermark</li>
-          <li>Unlock / Protect PDF</li>
-          <li>JPG ↔ PDF and Office converters</li>
-        </ul>
-        <p>Enable JavaScript to use these tools in your browser.</p>
+        <div class="home-tool-grid" aria-label="Popular tools">
+          <button type="button" class="home-tool-tile" data-open-tool="merge"><strong>Merge PDF</strong><span>Combine multiple PDFs into one</span></button>
+          <button type="button" class="home-tool-tile" data-open-tool="compress"><strong>Compress PDF</strong><span>Reduce file size</span></button>
+          <button type="button" class="home-tool-tile" data-open-tool="pdf-to-jpg"><strong>PDF to JPG</strong><span>Export pages as images</span></button>
+          <button type="button" class="home-tool-tile" data-open-tool="jpg-to-pdf"><strong>JPG to PDF</strong><span>Build a PDF from images</span></button>
+          <button type="button" class="home-tool-tile" data-open-tool="esign"><strong>E-sign PDF</strong><span>Type, draw, or upload a signature</span></button>
+          <button type="button" class="home-tool-tile" data-open-tool="organize"><strong>Organize PDF</strong><span>Reorder or remove pages</span></button>
+        </div>
       </section>
-    </noscript>
 
-    <section class="tool-grid" id="tools" aria-label="PDF and document tools"></section>
+      <noscript>
+        <section style="padding-bottom: 2rem">
+          <h2>Available PDF tools</h2>
+          <ul>
+            <li>Merge / Split / Organize PDF</li>
+            <li>Compress / Rotate / Page numbers</li>
+            <li>Edit / OCR / E-sign / Watermark</li>
+            <li>Unlock / Protect PDF</li>
+            <li>JPG ↔ PDF and Office converters</li>
+          </ul>
+          <p>Enable JavaScript to use these tools in your browser.</p>
+        </section>
+      </noscript>
 
-    <section class="home-faq" aria-label="FAQ">
-      <p class="eyebrow">FAQ</p>
-      <h2>Straight answers</h2>
-      <details class="faq-item">
-        <summary>Do you keep my PDFs?</summary>
-        <p>No archive. Processing is ephemeral. Share links expire and delete themselves. Organize PDF reorders pages in your browser without uploading the finished file.</p>
-      </details>
-      <details class="faq-item">
-        <summary>Is this free?</summary>
-        <p>Yes — no account required for the tools listed here. Default upload limit is 100&nbsp;MB per file.</p>
-      </details>
-      <details class="faq-item">
-        <summary>What else does DevStrand offer?</summary>
-        <p>
-          <a href="https://image.devstrand.com/">Image studio</a> for photo edit, generate, and passport photos ·
-          <a href="https://livetranslate.devstrand.com/">LiveTranslate</a> for real-time voice translation ·
-          <a href="https://devstrand.com/">Company site</a>
-        </p>
-      </details>
-    </section>
+      <section class="tool-grid" id="tools" aria-label="PDF and document tools"></section>
+
+      <section class="home-faq" aria-label="FAQ">
+        <h2>FAQ</h2>
+        <details class="faq-item">
+          <summary>Do you keep my PDFs?</summary>
+          <p>No archive. Processing is ephemeral. Share links expire and delete themselves. Organize PDF reorders pages in your browser without uploading the finished file.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Is this free?</summary>
+          <p>Yes — no account required. Default upload limit is 100&nbsp;MB per file.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What else does DevStrand offer?</summary>
+          <p>
+            <a href="https://image.devstrand.com/">Image studio</a> ·
+            <a href="https://livetranslate.devstrand.com/">LiveTranslate</a> ·
+            <a href="https://devstrand.com/">Company site</a>
+          </p>
+        </details>
+      </section>
+    </div>
 
     <section class="workspace" id="workspace" hidden>
       <button type="button" class="back" id="backBtn">← All tools</button>
-      <h2 id="wsTitle"></h2>
-      <p class="ws-desc" id="wsDesc"></p>
+      <header class="tool-workspace-head">
+        <h1 id="wsTitle"></h1>
+        <p class="ws-desc" id="wsDesc"></p>
+      </header>
       <form id="toolForm" class="tool-form">
-        <div class="drop" id="dropZone">
+        <div class="drop drop-hero" id="dropZone">
           <input type="file" id="fileInput" multiple />
-          <p><strong id="dropTitle">Drop files here</strong> or click to browse</p>
+          <span class="drop-icon" aria-hidden="true">⬆</span>
+          <strong id="dropTitle">Select PDF files</strong>
+          <span class="drop-or" id="dropOr">or drop files here</span>
+          <span class="drop-cta" id="dropCta">Select files</span>
+          <em class="drop-trust">No signup · ephemeral processing · free</em>
           <p class="hint" id="fileHint"></p>
         </div>
 
@@ -344,13 +336,13 @@
   </main>
 
   <footer class="foot">
-    <p>© <span id="year"></span> DevStrand · CRO 821307 · <strong>No permanent storage</strong> — processing is ephemeral; share links expire; emailed copies are not archived. · <a href="https://image.devstrand.com/">Image</a> · <a href="https://livetranslate.devstrand.com/">LiveTranslate</a></p>
+    <p>© <span id="year"></span> DevStrand · CRO 821307 · No permanent storage · <a href="https://image.devstrand.com/">Image</a> · <a href="https://livetranslate.devstrand.com/">LiveTranslate</a> · <a href="https://devstrand.com/">Company</a></p>
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
   <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js" defer></script>
   <script src="/static/js/editor.js?v=12" defer></script>
-  <script src="/static/js/app.js?v=27" defer></script>
+  <script src="/static/js/app.js?v=28" defer></script>
 </body>
 </html>
